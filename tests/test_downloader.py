@@ -5,8 +5,8 @@ from pathlib import Path
 
 import pytest
 
-from ytdownloader import downloader
-from ytdownloader.downloader import (
+from vidcatch import downloader
+from vidcatch.downloader import (
     DownloadCancelled,
     FormatSummary,
     base_options,

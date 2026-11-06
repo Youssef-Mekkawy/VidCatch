@@ -1,4 +1,4 @@
-from ytdownloader import system
+from vidcatch import system
 
 
 def test_detect_browsers_orders_firefox_first(tmp_path, monkeypatch):

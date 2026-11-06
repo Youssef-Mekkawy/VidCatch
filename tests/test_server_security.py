@@ -1,7 +1,7 @@
 import pytest
 from fastapi.testclient import TestClient
 
-from ytdownloader.server.app import create_app
+from vidcatch.server.app import create_app
 
 TOKEN = "test-token-123"
 PORT = 8765
@@ -17,7 +17,7 @@ def raw_client():
 def test_ping_is_public(raw_client):
     response = raw_client.get("/api/ping")
     assert response.status_code == 200
-    assert response.json()["app"] == "youtube-downloader"
+    assert response.json()["app"] == "vidcatch"
 
 
 def test_api_needs_the_session_cookie(raw_client):
@@ -80,4 +80,4 @@ def test_api_responses_are_not_cached(raw_client):
 def test_static_page_is_served(raw_client):
     response = raw_client.get("/")
     assert response.status_code == 200
-    assert "YouTube Downloader" in response.text
+    assert "VidCatch" in response.text

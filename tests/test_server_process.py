@@ -12,8 +12,8 @@ import time
 
 import pytest
 
-from ytdownloader.server import launcher
-from ytdownloader.server.events import EventHub
+from vidcatch.server import launcher
+from vidcatch.server.events import EventHub
 
 
 # ── In-process pieces ───────────────────────────────────────────────────────
@@ -71,7 +71,7 @@ def test_event_hub_drops_oldest_when_a_client_is_stuck():
 def start_server(data_dir, *flags, env_extra=None):
     env = {**os.environ, "YTDL_DATA_DIR": str(data_dir), **(env_extra or {})}
     proc = subprocess.Popen(
-        [sys.executable, "-m", "ytdownloader.server", "--no-browser", *flags],
+        [sys.executable, "-m", "vidcatch.server", "--no-browser", *flags],
         env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
     )
     info_file = data_dir / "server.json"
@@ -128,7 +128,7 @@ def test_cookie_handoff_events_and_shutdown(server):
     conn.close()
 
     conn, response = request(info, "GET", "/api/status", cookie)
-    assert response.status == 200 and json.loads(response.read())["app"] == "youtube-downloader"
+    assert response.status == 200 and json.loads(response.read())["app"] == "vidcatch"
     conn.close()
 
     # The event stream starts with a hello message.
@@ -155,7 +155,7 @@ def test_cookie_handoff_events_and_shutdown(server):
 def test_second_launch_reuses_the_running_server(server, tmp_path):
     _, info, data_dir = server
     result = subprocess.run(
-        [sys.executable, "-m", "ytdownloader.server", "--no-browser"],
+        [sys.executable, "-m", "vidcatch.server", "--no-browser"],
         env={**os.environ, "YTDL_DATA_DIR": str(data_dir)},
         capture_output=True, text=True, timeout=30,
     )

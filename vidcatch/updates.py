@@ -41,7 +41,7 @@ def is_newer(latest: str, current: str) -> bool:
 def fetch_latest_version(timeout: float = 6.0) -> str | None:
     """Latest yt-dlp release on PyPI, or None when offline or PyPI is unreachable."""
     try:
-        request = urllib.request.Request(PYPI_URL, headers={"User-Agent": "youtube-downloader"})
+        request = urllib.request.Request(PYPI_URL, headers={"User-Agent": "vidcatch"})
         with urllib.request.urlopen(request, timeout=timeout) as response:
             return str(json.load(response)["info"]["version"])
     except Exception:

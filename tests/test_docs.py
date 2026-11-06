@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from ytdownloader.errors import ALL_CODES
+from vidcatch.errors import ALL_CODES
 
 ROOT = Path(__file__).resolve().parent.parent
 

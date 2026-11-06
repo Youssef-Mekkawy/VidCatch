@@ -1,6 +1,6 @@
 import json
 
-from ytdownloader import config
+from vidcatch import config
 
 
 def test_defaults_when_no_file():
@@ -146,3 +146,18 @@ def test_old_cookies_file_setting_is_dropped():
     assert "cookies_file" not in config.load_config()
     config.save_config(config.load_config())
     assert "cookies_file" not in json.loads(config.config_path().read_text())
+
+
+def test_old_data_folder_is_adopted(tmp_path, monkeypatch):
+    from vidcatch import config
+
+    monkeypatch.delenv("YTDL_DATA_DIR", raising=False)
+    monkeypatch.setattr(config.sys, "platform", "linux")
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
+    old = tmp_path / "youtube-downloader"
+    old.mkdir()
+    (old / "history.json").write_text("[]")
+
+    folder = config.data_dir()
+    assert folder == tmp_path / "vidcatch"
+    assert (folder / "history.json").exists() and not old.exists()

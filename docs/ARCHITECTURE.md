@@ -1,13 +1,13 @@
 # Architecture
 
-YouTube Downloader runs **on the user's own computer**. A small Python server (FastAPI) wraps
+VidCatch runs **on the user's own computer**. A small Python server (FastAPI) wraps
 yt-dlp; the user interface is a web page (plain HTML, CSS and JavaScript) shown in a browser or an
 app-style window.
 
 ```
  Browser tab / app window            Local server (127.0.0.1 only)
  ┌──────────────────────┐  HTTP    ┌────────────────────────────────────────┐
- │ ytdownloader/web/    │ ───────▶ │ server/api.py      JSON routes         │
+ │ vidcatch/web/    │ ───────▶ │ server/api.py      JSON routes         │
  │  HTML, CSS, JS       │ ◀─────── │ server/jobs.py     background jobs     │
  └──────────────────────┘   SSE    │ server/events.py   live progress hub   │
                                    │ server/security.py token, Host, Origin │
@@ -64,7 +64,7 @@ The same rule holds everywhere: **plain first, cookies only after YouTube refuse
 
 ## Web interface
 
-`ytdownloader/web/` is served as-is (no build step, no npm).
+`vidcatch/web/` is served as-is (no build step, no npm).
 
 ```
 web/
@@ -104,8 +104,8 @@ The server can read browser cookies and write files, so a random web page must n
 
 ## Data folder
 
-`%APPDATA%\YouTubeDownloader` (Windows), `~/Library/Application Support/YouTubeDownloader` (macOS),
-`~/.config/youtube-downloader` (Linux), or `YTDL_DATA_DIR`. It holds `config.json`, `history.json`,
+`%APPDATA%\VidCatch` (Windows), `~/Library/Application Support/VidCatch` (macOS),
+`~/.config/vidcatch` (Linux), or `YTDL_DATA_DIR`. It holds `config.json`, `history.json`,
 `server.json`, `server.log` and `temp/`.
 
 ## Tests

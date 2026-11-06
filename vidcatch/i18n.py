@@ -7,7 +7,7 @@ RTL_LANGUAGES = {"ar"}
 TRANSLATIONS: dict[str, dict[str, str]] = {
     "en": {
         # General
-        "title": "YouTube Downloader",
+        "title": "VidCatch",
         "tab_download": "Download",
         "tab_history": "History",
         "lang_switch": "العربية",

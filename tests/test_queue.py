@@ -8,10 +8,10 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from ytdownloader.config import data_dir, load_history, update_config
-from ytdownloader.server import api, jobs
-from ytdownloader.server.app import create_app
-from ytdownloader.server.queue_manager import QueueManager, match_languages, video_key
+from vidcatch.config import data_dir, load_history, update_config
+from vidcatch.server import api, jobs
+from vidcatch.server.app import create_app
+from vidcatch.server.queue_manager import QueueManager, match_languages, video_key
 
 TOKEN = "t0ken"
 PORT = 8765

@@ -23,6 +23,6 @@ jobs:
       - name: Lint
         run: ruff check .
       - name: Byte-compile every module (catches syntax errors in the GUI code)
-        run: python -m compileall -q ytdownloader main.py
+        run: python -m compileall -q vidcatch main.py
       - name: Test
         run: pytest -q

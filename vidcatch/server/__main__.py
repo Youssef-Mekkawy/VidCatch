@@ -1,4 +1,4 @@
-"""Allows `python -m ytdownloader.server`."""
+"""Allows `python -m vidcatch.server`."""
 
 from .launcher import main
 

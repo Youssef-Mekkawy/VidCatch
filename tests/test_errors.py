@@ -3,9 +3,9 @@ from pathlib import Path
 
 import pytest
 
-from ytdownloader.errors import ALL_CODES, classify
+from vidcatch.errors import ALL_CODES, classify
 
-LOCALES = Path(__file__).resolve().parent.parent / "ytdownloader" / "web" / "locales"
+LOCALES = Path(__file__).resolve().parent.parent / "vidcatch" / "web" / "locales"
 
 
 @pytest.mark.parametrize(
@@ -48,7 +48,7 @@ def test_every_code_has_texts_in_both_languages():
 
 
 def test_private_playlist_counts_as_needing_sign_in():
-    from ytdownloader.downloader import login_reason, needs_login
+    from vidcatch.downloader import login_reason, needs_login
 
     message = "[youtube:tab] LL: The playlist does not exist."
     assert needs_login(message) and login_reason(message) == "private"

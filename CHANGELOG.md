@@ -1,6 +1,13 @@
 # Changelog
 
-## Unreleased
+## 1.0.0 - 2026-11-06
+
+First release under the name **VidCatch** (the project was called YouTube Downloader before).
+
+### Renamed
+- The app, the Python package (`vidcatch`), the commands (`vidcatch`, `vidcatch-desktop`) and the data folder
+  are now called VidCatch. An existing `YouTubeDownloader` data folder (settings, history, queue) is renamed
+  automatically on first start.
 
 ### Changed
 - The Playlist page now adds the selected videos to the queue (one by one, pause/resume, survives a
@@ -29,10 +36,10 @@
 - Error codes (`E100`...`E930`) with a plain title, an explanation and numbered steps in English and
   Arabic, a collapsible technical detail and a "Copy details" bug-report block. See `docs/ERRORS.md`.
 - "Already downloaded" dialog: skip, show the folder, or download again.
-- Browser interface (`ytdownloader/web/`): Download, Playlist, History and Settings pages, sign-in
+- Browser interface (`vidcatch/web/`): Download, Playlist, History and Settings pages, sign-in
   consent dialog and account picker, update and FFmpeg banners, English and Arabic (right-to-left).
   Plain CSS with design tokens, vanilla ES modules, bundled fonts, no build step, works offline.
-- Local web server (`python -m ytdownloader.server`): a FastAPI JSON API around the existing engine,
+- Local web server (`python -m vidcatch.server`): a FastAPI JSON API around the existing engine,
   with live progress over Server-Sent Events. The CustomTkinter app keeps working meanwhile. See `docs/API.md` and `docs/ARCHITECTURE.md`.
 - Security for the local server: only `127.0.0.1`, Host and Origin checks, a secret session cookie,
   security headers, validated input.
@@ -44,10 +51,10 @@
 ## 2.0.0
 
 ### Changed
-- Restructured into the `ytdownloader` package (flat modules plus one `ui/` folder; no mixins).
+- Restructured into the `vidcatch` package (flat modules plus one `ui/` folder; no mixins).
 - Settings and history now live in a per-user folder instead of next to the script
-  (`%APPDATA%\YouTubeDownloader` on Windows, `~/Library/Application Support/YouTubeDownloader`
-  on macOS, `~/.config/youtube-downloader` on Linux). Existing `config.json` and `history.json`
+  (`%APPDATA%\VidCatch` on Windows, `~/Library/Application Support/VidCatch`
+  on macOS, `~/.config/vidcatch` on Linux). Existing `config.json` and `history.json`
   files from a source checkout are imported automatically on first start.
 - Redesigned UI with the same colour palette: segmented controls, a fixed header, a settings panel
   that slides in under it, an empty state for the video card, rounded thumbnails.

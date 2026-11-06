@@ -5,8 +5,8 @@ import time
 
 import pytest
 
-from ytdownloader import signin, system
-from ytdownloader.signin import Probe, Source
+from vidcatch import signin, system
+from vidcatch.signin import Probe, Source
 
 
 @pytest.fixture

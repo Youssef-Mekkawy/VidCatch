@@ -1,8 +1,8 @@
-# YouTube Downloader
+# VidCatch
 
-A desktop app for downloading videos, audio and playlists from YouTube. Built with
-[CustomTkinter](https://github.com/TomSchimansky/CustomTkinter) and
-[yt-dlp](https://github.com/yt-dlp/yt-dlp). Dark theme, English and Arabic (RTL) interface.
+Catch videos, audio and playlists from YouTube and keep them on your computer. VidCatch runs **locally**
+(a small server on your own PC plus a browser page), built on [yt-dlp](https://github.com/yt-dlp/yt-dlp).
+English and Arabic (RTL) interface.
 
 ![Main window](docs/screenshots/main.png)
 
@@ -35,8 +35,7 @@ A desktop app for downloading videos, audio and playlists from YouTube. Built wi
 
 ## Requirements
 
-- Python 3.10 or newer, with Tk (included in the Windows and macOS installers; on Debian/Ubuntu
-  install `python3-tk`)
+- Python 3.10 or newer
 - [FFmpeg](https://ffmpeg.org/) — needed to merge video and audio and to make MP3 files.
   The app offers to install it on first start (winget on Windows, Homebrew on macOS, apt on Linux).
 - A JavaScript runtime — [Deno](https://deno.com/) (recommended), [Node.js](https://nodejs.org/)
@@ -46,21 +45,21 @@ A desktop app for downloading videos, audio and playlists from YouTube. Built wi
 ## Install and run
 
 ```bash
-git clone <your-repo-url>
-cd youtube-downloader
+git clone https://github.com/<your-username>/VidCatch.git
+cd VidCatch
 
 python -m venv .venv
 # Windows: .venv\Scripts\activate      macOS/Linux: source .venv/bin/activate
 
 pip install -r requirements.txt
-python main.py
+python -m vidcatch.server        # opens VidCatch in your browser
 ```
 
-You can also install it as a package, which adds a `youtube-downloader` command:
+Or install it as a package, which adds the `vidcatch` command:
 
 ```bash
 pip install .
-youtube-downloader
+vidcatch
 ```
 
 Keep yt-dlp up to date, because YouTube changes often:
@@ -69,58 +68,35 @@ Keep yt-dlp up to date, because YouTube changes often:
 pip install -U "yt-dlp[default]"
 ```
 
-## Web version (preview)
-
-The next version replaces the desktop window with a web page served from your own computer:
-
-```bash
-python -m ytdownloader.server --no-browser --keep-running   # prints the local address; open it in a browser
-```
-
 Developer documentation: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) and [docs/API.md](docs/API.md).
 
 ## Where your data is stored
 
 | OS | Folder |
 | --- | --- |
-| Windows | `%APPDATA%\YouTubeDownloader` |
-| macOS | `~/Library/Application Support/YouTubeDownloader` |
-| Linux | `~/.config/youtube-downloader` |
+| Windows | `%APPDATA%\VidCatch` |
+| macOS | `~/Library/Application Support/VidCatch` |
+| Linux | `~/.config/vidcatch` |
 
 The folder holds `config.json`, `history.json`, `queue.json` (the download queue) and a `temp/` folder (movable in Settings) used
 while downloading (it keeps the unfinished downloads under `partial_*` for up to 7 days).
-Set the `YTDL_DATA_DIR` environment variable to use a different location.
+Data from the old name (`YouTubeDownloader`) is picked up automatically. Set the `YTDL_DATA_DIR` environment variable to use a different location.
 A `config.json` or `history.json` from an older version next to the script is imported on first start.
 
 ## Project structure
 
 ```
-main.py                  Launcher (python main.py)
-ytdownloader/
-  app.py                 Main window, task tracking, language and settings panel
-  downloader.py          yt-dlp wrapper: options, formats, progress, download
-  config.py              Settings and history storage
-  system.py              FFmpeg, JS runtime detection, open folder, internet check
-  signin.py              Browser profiles, cookie checks, sign-in fetch (nothing is written to disk)
-  updates.py             yt-dlp update check (PyPI) and one-click update
-  server/                Local web server: API, background jobs, security, launcher
-  web/                   Browser UI files (placeholder page for now)
-  i18n.py                English and Arabic strings
-  theme.py               Colors, sizes, fonts
-  utils.py               Formatting and file name helpers
-  ui/
-    layout.py            Shared widgets, RTL helper, thumbnail loader
-    header.py            Tabs, language button, settings button
-    main_view.py         Single video: fetch, preview, download
-    playlist_view.py     Playlist selection and download
-    history_view.py      Download history
-    settings_panel.py    Slide-in settings
-    account_picker.py    "Which account?" dialog
+vidcatch/
+  server/                Local web server: API, jobs, queue, security, launcher
+  web/                   Browser UI (plain HTML, CSS and JavaScript modules, EN/AR translations)
+  downloader.py          yt-dlp wrapper: options, formats, progress, resumable download
+  config.py              Settings, history and data folder
+  signin.py              Browser profiles and sign-in fetch (nothing is written to disk)
+  system.py, updates.py  FFmpeg and JS runtime detection, yt-dlp update check
+  errors.py              Error codes (see docs/ERRORS.md)
+  app.py, ui/            The older desktop (Tk) window, kept until the web version fully replaces it
 tests/                   pytest suite (no network needed)
 ```
-
-Worker threads never touch widgets directly. They call `app.post(fn)`, which queues the call and
-runs it on the Tk main thread.
 
 ## Development
 
@@ -133,7 +109,7 @@ pytest -q         # tests
 
 CI runs lint, a byte-compile check and the tests on Linux and Windows (Python 3.10 and 3.12).
 
-When you add a string, add it to both languages in `ytdownloader/i18n.py`; the tests fail if the
+When you add a string, add it to both languages in `vidcatch/web/locales/en.json` and `ar.json`; the tests fail if the
 two languages drift apart or a key is unused.
 
 ## Troubleshooting
@@ -160,9 +136,6 @@ Cookies stay on your PC and are sent only to YouTube; the app stores just the br
 
 **"FFmpeg not found"**
 Install FFmpeg and make sure `ffmpeg` works in a terminal, then restart the app.
-
-**Arabic text looks disconnected on Linux**
-Some Tk builds on Linux do not shape Arabic letters. Windows and macOS render it correctly.
 
 ## Legal
 

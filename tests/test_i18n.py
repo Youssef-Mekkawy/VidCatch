@@ -2,9 +2,9 @@ import re
 import string
 from pathlib import Path
 
-from ytdownloader.i18n import TRANSLATIONS, is_rtl
+from vidcatch.i18n import TRANSLATIONS, is_rtl
 
-PACKAGE = Path(__file__).resolve().parent.parent / "ytdownloader"
+PACKAGE = Path(__file__).resolve().parent.parent / "vidcatch"
 KEY_PATTERN = re.compile(r"""\bt\[\s*["']([a-z0-9_]+)["']\s*\]""")
 
 

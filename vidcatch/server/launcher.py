@@ -1,9 +1,9 @@
 """Starts the app: finds a running copy or starts the server, opens the window, stops when closed.
 
-    python -m ytdownloader.server                 # app-style window if Edge/Chrome is found
-    python -m ytdownloader.server --browser       # always a normal browser tab
-    python -m ytdownloader.server --no-browser    # just print the address (development)
-    python -m ytdownloader.server --keep-running  # do not exit when the page is closed
+    python -m vidcatch.server                 # app-style window if Edge/Chrome is found
+    python -m vidcatch.server --browser       # always a normal browser tab
+    python -m vidcatch.server --no-browser    # just print the address (development)
+    python -m vidcatch.server --keep-running  # do not exit when the page is closed
 
 Single instance: a running server writes its port and token to `server.json` in the data folder.
 A second launch finds it, opens a window on it and exits, so there is never a second server.
@@ -127,7 +127,7 @@ def spawn_replacement() -> None:
     command = (
         [sys.executable, *sys.argv[1:]]
         if getattr(sys, "frozen", False)
-        else [sys.executable, "-m", "ytdownloader.server", *sys.argv[1:]]
+        else [sys.executable, "-m", "vidcatch.server", *sys.argv[1:]]
     )
     kwargs: dict = {"env": {**os.environ, "YTDL_RESTART": "1"}, "stdin": subprocess.DEVNULL,
                     "stdout": subprocess.DEVNULL, "stderr": subprocess.DEVNULL}
@@ -140,7 +140,7 @@ def spawn_replacement() -> None:
 
 # ── Main ────────────────────────────────────────────────────────────────────
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="youtube-downloader", description="YouTube Downloader")
+    parser = argparse.ArgumentParser(prog="vidcatch", description="VidCatch")
     parser.add_argument("--port", type=int, default=0, help="fixed port (default: first free one)")
     parser.add_argument("--browser", action="store_true", help="open a normal browser tab")
     parser.add_argument("--no-browser", action="store_true", help="do not open anything")
@@ -215,7 +215,7 @@ def main(argv: list[str] | None = None) -> int:
         else:
             return
         url = f"http://127.0.0.1:{port}/?t={token}"
-        print(f"YouTube Downloader is running at http://127.0.0.1:{port}/")
+        print(f"VidCatch is running at http://127.0.0.1:{port}/")
         if mode == "none":
             print("Open this link once to sign the browser in:", url)
         open_ui(url, mode)

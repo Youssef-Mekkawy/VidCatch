@@ -73,7 +73,7 @@ from .schemas import (
 )
 from .serialize import playlist_payload, video_payload
 
-APP_ID = "youtube-downloader"
+APP_ID = "vidcatch"
 
 
 @dataclass

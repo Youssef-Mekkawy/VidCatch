@@ -11,7 +11,8 @@ import time
 import uuid
 from pathlib import Path
 
-APP_DIR_NAME = "YouTubeDownloader"
+APP_DIR_NAME = "VidCatch"
+LEGACY_DIR_NAMES = ("YouTubeDownloader", "youtube-downloader")  # folders used before the rename
 HISTORY_LIMIT = 200
 SUPPORTED_LANGUAGES = ("en", "ar")
 SUPPORTED_FORMATS = ("mp4", "mp3")
@@ -19,7 +20,7 @@ QUALITY_CHOICES = ("best", "1080p", "720p", "480p", "360p")
 
 DEFAULT_CONFIG: dict = {
     "language": "en",
-    "download_dir": str(Path.home() / "Downloads" / "YouTube-Downloader"),
+    "download_dir": str(Path.home() / "Downloads" / "VidCatch"),
     "default_format": "mp4",
     "default_quality": "best",
     "auto_download": False,
@@ -56,9 +57,25 @@ def data_dir() -> Path:
         path = Path.home() / "Library" / "Application Support" / APP_DIR_NAME
     else:
         base = os.environ.get("XDG_CONFIG_HOME") or str(Path.home() / ".config")
-        path = Path(base) / "youtube-downloader"
+        path = Path(base) / "vidcatch"
+    if not override:
+        _adopt_legacy_dir(path)
     path.mkdir(parents=True, exist_ok=True)
     return path
+
+
+def _adopt_legacy_dir(path: Path) -> None:
+    """Keep the settings, history and queue of the app's old name: rename the old folder once."""
+    if path.exists():
+        return
+    for name in LEGACY_DIR_NAMES:
+        old = path.parent / name
+        if old.is_dir():
+            try:
+                old.rename(path)
+            except OSError:
+                pass  # in use or no permission: start fresh rather than fail
+            return
 
 
 def config_path() -> Path:

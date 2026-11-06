@@ -2,7 +2,7 @@
 
 Every failure shown to the user carries a code such as `E120`. The code appears in the red box next to
 a plain title, what happened, and numbered steps the user can follow. Developers: the registry is
-`ytdownloader/errors.py`; the texts are `err_<code>_title|text|steps` in `ytdownloader/web/locales/*.json`.
+`vidcatch/errors.py`; the texts are `err_<code>_title|text|steps` in `vidcatch/web/locales/*.json`.
 
 To add a code: add a rule (or a fixed code) in `errors.py`, add the three texts in **both** languages
 and add a row here. `tests/test_errors.py` fails when a text is missing, and

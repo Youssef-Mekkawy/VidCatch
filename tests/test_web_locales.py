@@ -3,7 +3,7 @@ import json
 import re
 from pathlib import Path
 
-WEB = Path(__file__).resolve().parent.parent / "ytdownloader" / "web"
+WEB = Path(__file__).resolve().parent.parent / "vidcatch" / "web"
 
 
 def load(lang):

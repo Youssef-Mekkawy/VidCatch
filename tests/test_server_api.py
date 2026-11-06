@@ -5,11 +5,11 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from ytdownloader.config import add_history_entry, load_history, update_config
-from ytdownloader.downloader import DownloadCancelled
-from ytdownloader.server import api, jobs
-from ytdownloader.server.app import create_app
-from ytdownloader.signin import Probe, Resolution, Source
+from vidcatch.config import add_history_entry, load_history, update_config
+from vidcatch.downloader import DownloadCancelled
+from vidcatch.server import api, jobs
+from vidcatch.server.app import create_app
+from vidcatch.signin import Probe, Resolution, Source
 
 TOKEN = "t0ken"
 PORT = 8765
@@ -71,7 +71,7 @@ def fake_download(url, opts, temp_root, output_path, **_):
 # ── Status and settings ─────────────────────────────────────────────────────
 def test_status_reports_environment(client):
     data = client.get("/api/status").json()
-    assert data["app"] == "youtube-downloader"
+    assert data["app"] == "vidcatch"
     assert data["settings"]["language"] == "en"
     assert isinstance(data["browsers"], list) and isinstance(data["js_runtimes"], list)
 
@@ -87,8 +87,8 @@ def test_settings_roundtrip_and_validation(client):
 
 
 def test_temp_folder_setting(client, tmp_path):
-    from ytdownloader.config import temp_dir
-    from ytdownloader.downloader import partial_path
+    from vidcatch.config import temp_dir
+    from vidcatch.downloader import partial_path
 
     old = temp_dir()
     partial = partial_path(old, "abc")
@@ -520,7 +520,7 @@ def test_video_is_kept_when_only_the_subtitles_fail(app, client, download_dir, m
 
 
 def test_subtitle_tracks_group_every_language():
-    from ytdownloader.downloader import subtitle_tracks
+    from vidcatch.downloader import subtitle_tracks
 
     info = {
         "subtitles": {"fr": [], "ar": [], "en-GB": [], "live_chat": []},
@@ -593,7 +593,7 @@ def test_subtitles_only_saves_beside_an_existing_video(app, client, download_dir
 
 
 def test_find_existing_video_prefers_exact_name_then_newest(tmp_path):
-    from ytdownloader.utils import find_existing_video
+    from vidcatch.utils import find_existing_video
 
     (tmp_path / "Clip").mkdir()
     old = tmp_path / "Clip_480p.mp4"

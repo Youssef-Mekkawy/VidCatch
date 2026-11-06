@@ -1,7 +1,7 @@
 import json
 import subprocess
 
-from ytdownloader import updates
+from vidcatch import updates
 
 
 def test_parse_version():

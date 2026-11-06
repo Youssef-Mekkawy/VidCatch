@@ -1,6 +1,6 @@
 import pytest
 
-from ytdownloader.utils import (
+from vidcatch.utils import (
     format_count,
     format_duration,
     format_eta,
