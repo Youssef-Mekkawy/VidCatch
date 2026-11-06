@@ -4,6 +4,10 @@
 
 First release under the name **VidCatch** (the project was called YouTube Downloader before).
 
+### Added
+- Ready-to-run builds for Windows, Linux and macOS (PyInstaller, `packaging/`). A GitHub Actions workflow builds
+  them when a version tag is pushed, smoke-tests each one, and attaches them with SHA-256 checksums to the release.
+
 ### Renamed
 - The app, the Python package (`vidcatch`), the commands (`vidcatch`, `vidcatch-desktop`) and the data folder
   are now called VidCatch. An existing `YouTubeDownloader` data folder (settings, history, queue) is renamed

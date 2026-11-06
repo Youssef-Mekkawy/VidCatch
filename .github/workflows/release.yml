@@ -1,0 +1,65 @@
+name: Release
+
+# Builds VidCatch for Windows, Linux and macOS when a version tag (v1.0.0, v1.1.0, ...) is pushed,
+# and attaches the downloads and their SHA-256 checksums to that tag's GitHub release.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: windows-latest, name: windows, exe: output/dist/VidCatch/VidCatch.exe }
+          - { os: ubuntu-latest, name: linux, exe: output/dist/VidCatch/VidCatch }
+          - { os: macos-latest, name: macos, exe: output/dist/VidCatch/VidCatch }
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install
+        run: python -m pip install -r requirements.txt pyinstaller
+      - name: Build
+        run: python -m PyInstaller packaging/vidcatch.spec --noconfirm --distpath output/dist --workpath output/build
+      - name: Smoke test (start the program and ask it for its status)
+        run: python packaging/smoke_test.py ${{ matrix.exe }}
+      - name: Pack (Windows)
+        if: matrix.name == 'windows'
+        shell: pwsh
+        run: Compress-Archive -Path output/dist/VidCatch -DestinationPath VidCatch-windows.zip
+      - name: Pack (Linux, macOS)
+        if: matrix.name != 'windows'
+        run: tar -czf VidCatch-${{ matrix.name }}.tar.gz -C output/dist VidCatch
+      - uses: actions/upload-artifact@v4
+        with:
+          name: VidCatch-${{ matrix.name }}
+          path: |
+            VidCatch-windows.zip
+            VidCatch-*.tar.gz
+          if-no-files-found: error
+
+  publish:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: files
+          merge-multiple: true
+      - name: Checksums
+        working-directory: files
+        run: sha256sum VidCatch-* > SHA256SUMS.txt && cat SHA256SUMS.txt
+      - name: Attach to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${{ github.ref_name }}" files/* --clobber --repo "${{ github.repository }}"

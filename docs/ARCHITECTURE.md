@@ -132,3 +132,11 @@ points to a complete file. The Tk app still calls `download_media` without `resu
 starts each item as a normal `video` job and waits for it (`Job.finished`). Metadata for newly added links is
 fetched by a second thread, one link at a time. Pause cancels the running job and keeps its partial folder;
 a restart turns `downloading` items into `paused`. Routes are in `server/queue_api.py`.
+
+## Packaging
+
+`packaging/vidcatch.spec` builds a PyInstaller folder (`output/dist/VidCatch/`; everything the build creates goes under `output/`, which git ignores) from `packaging/vidcatch_entry.py`.
+The web files are bundled as data, yt-dlp is collected with all its extractors, and the old Tk window is left
+out. The app is windowed (no console), so the launcher logs to `server.log` in the data folder.
+`packaging/smoke_test.py` starts the built program and checks `/api/status`; `build.ps1` runs the whole Windows
+build, and `.github/workflows/release.yml` does it for all three systems on a `v*` tag.

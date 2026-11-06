@@ -1,4 +1,4 @@
-﻿# VidCatch
+# VidCatch
 
 Catch videos, audio and playlists from YouTube and keep them on your computer. VidCatch runs **locally**
 (a small server on your own PC plus a browser page), built on [yt-dlp](https://github.com/yt-dlp/yt-dlp).
@@ -36,16 +36,30 @@ English and Arabic (RTL) interface.
 ## Requirements
 
 - Python 3.10 or newer
-- [FFmpeg](https://ffmpeg.org/) â€” needed to merge video and audio and to make MP3 files.
+- [FFmpeg](https://ffmpeg.org/) — needed to merge video and audio and to make MP3 files.
   The app offers to install it on first start (winget on Windows, Homebrew on macOS, apt on Linux).
-- A JavaScript runtime â€” [Deno](https://deno.com/) (recommended), [Node.js](https://nodejs.org/)
+- A JavaScript runtime — [Deno](https://deno.com/) (recommended), [Node.js](https://nodejs.org/)
   or [Bun](https://bun.sh/). Optional: the app first tries without one and uses it only as a
   retry when YouTube answers `HTTP Error 403` or hides formats. The app shows a banner if none is found.
 
-## Install and run
+## Download (no Python needed)
+
+Get the build for your system from the [Releases page](https://github.com/Youssef-Mekkawy/VidCatch/releases/latest):
+
+| System | File | Start it |
+| --- | --- | --- |
+| Windows | `VidCatch-windows.zip` | Unzip, open the `VidCatch` folder, run `VidCatch.exe` |
+| Linux | `VidCatch-linux.tar.gz` | `tar -xzf VidCatch-linux.tar.gz && ./VidCatch/VidCatch` |
+| macOS | `VidCatch-macos.tar.gz` | `tar -xzf VidCatch-macos.tar.gz && ./VidCatch/VidCatch` |
+
+Check a download against `SHA256SUMS.txt` on the same page. The builds are not code-signed, so Windows
+SmartScreen or macOS Gatekeeper may warn on first start (Windows: "More info" then "Run anyway"; macOS:
+right-click the file, then Open). FFmpeg is not included; VidCatch offers to install it on first start.
+
+## Install and run (from source)
 
 ```bash
-git clone https://github.com/Youssef-Mekkawy/VidCatch.git
+git clone https://github.com/<your-username>/VidCatch.git
 cd VidCatch
 
 python -m venv .venv
