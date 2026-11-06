@@ -4,6 +4,8 @@ Catch videos, audio and playlists from YouTube and keep them on your computer. V
 (a small server on your own PC plus a browser page), built on [yt-dlp](https://github.com/yt-dlp/yt-dlp).
 English and Arabic (RTL) interface.
 
+**Website and downloads: https://youssef-mekkawy.github.io/VidCatch/**
+
 ![Main window](docs/screenshots/main.png)
 
 ## Features

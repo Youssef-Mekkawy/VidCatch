@@ -2,6 +2,9 @@
 
 ## 1.0.1 - 2026-11-06
 
+### Added
+- Landing page (`site/`) published with GitHub Pages at https://youssef-mekkawy.github.io/VidCatch/ (workflow `.github/workflows/pages.yml`).
+
 ### Removed
 - The old CustomTkinter desktop window (`app.py`, `ui/`, `theme.py`, `i18n.py`) and its dependencies
   (`customtkinter`, `Pillow`). `python -m vidcatch` and the `vidcatch` command now start the web app.
