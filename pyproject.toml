@@ -1,0 +1,48 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "youtube-downloader"
+dynamic = ["version"]
+description = "A desktop YouTube downloader with a dark UI, playlist support and English/Arabic interface."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+dependencies = [
+    "customtkinter>=5.2.2",
+    "Pillow>=10.0",
+    "yt-dlp[default]>=2025.10.22",
+    "fastapi>=0.115",
+    "uvicorn>=0.30",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "ruff>=0.6", "httpx>=0.27"]
+
+[project.gui-scripts]
+youtube-downloader = "ytdownloader.app:main"
+
+# The new local web version (the browser UI is added in the next release step).
+[project.scripts]
+youtube-downloader-web = "ytdownloader.server.launcher:main"
+
+[tool.setuptools.packages.find]
+include = ["ytdownloader*"]
+
+[tool.setuptools.package-data]
+ytdownloader = ["web/**/*"]
+
+[tool.setuptools.dynamic]
+version = { attr = "ytdownloader.__version__" }
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+ignore = ["E501"]  # long UI strings and layout calls are fine

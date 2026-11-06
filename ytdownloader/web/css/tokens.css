@@ -1,0 +1,60 @@
+/* Design tokens. Change the look of the whole app here.
+   Everything else in css/ reads these variables, nothing is hard-coded elsewhere. */
+
+:root {
+  /* Surfaces */
+  --paper: #f3f0e8;        /* page background */
+  --surface: #ffffff;      /* cards, inputs */
+  --track: #eae6da;        /* progress track, disabled fill */
+  --line: #dad5c8;         /* soft dividers */
+
+  /* Text and strokes */
+  --ink: #15171a;          /* main text, outlines, hard shadows */
+  --muted: #5b6068;        /* secondary text (AA on paper and on white) */
+  --on-ink: #f3f0e8;       /* text on dark surfaces */
+  --on-ink-muted: #c9cdd3;
+
+  /* Brand */
+  --accent: #2f4bff;       /* primary actions */
+  --accent-ink: #ffffff;
+  --lime: #d4f55a;         /* highlight, progress, selected */
+  --lime-soft: #e9f8b8;    /* success background */
+  --coral: #ff8a5b;        /* placeholder thumbnails only */
+
+  /* Feedback */
+  --danger: #8f1d17;
+  --danger-bg: #fdecea;
+  --danger-ink: #5e100c;
+  --info-bg: #fff6d6;      /* informational banners */
+
+  /* Shape */
+  --radius-s: 10px;
+  --radius-m: 14px;
+  --radius-l: 20px;
+  --stroke: 1.5px;         /* normal outline */
+  --stroke-strong: 2px;    /* cards */
+  --hard-shadow: 0 8px 0 var(--ink);
+
+  /* Type */
+  --font-head: "Space Grotesk", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Inter", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+  --fs-body: 16px;
+  --fs-small: 14px;
+  --fs-tiny: 13px;
+
+  /* Layout */
+  --page-width: 1100px;
+  --gutter: 24px;
+  --control-h: 44px;       /* minimum touch target */
+}
+
+/* Arabic uses IBM Plex Sans Arabic for headings and body text. */
+:root[lang="ar"] {
+  --font-head: "IBM Plex Sans Arabic", "Segoe UI", Tahoma, system-ui, sans-serif;
+  --font-body: "IBM Plex Sans Arabic", "Inter", "Segoe UI", Tahoma, system-ui, sans-serif;
+}
+
+@media (max-width: 560px) {
+  :root { --gutter: 16px; }
+}

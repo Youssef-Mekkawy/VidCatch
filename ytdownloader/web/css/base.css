@@ -1,0 +1,91 @@
+/* Reset, page frame, header and typography. */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--fs-body);
+  line-height: 1.5;
+}
+
+button, input, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
+[hidden] { display: none !important; }
+
+:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
+
+h1, h2, h3 { font-family: var(--font-head); margin: 0; line-height: 1.1; }
+p { margin: 0; }
+
+.visually-hidden {
+  position: absolute; width: 1px; height: 1px; overflow: hidden;
+  clip: rect(0 0 0 0); white-space: nowrap;
+}
+
+.muted { color: var(--muted); }
+.mono { font-family: var(--font-mono); font-weight: 500; }
+
+/* ── Header ─────────────────────────────────────────────────────────────── */
+.header {
+  border-bottom: var(--stroke) solid var(--ink);
+  background: var(--paper);
+}
+.header__inner {
+  max-width: var(--page-width); margin: 0 auto;
+  padding: 10px var(--gutter);
+  display: flex; align-items: center; flex-wrap: wrap; gap: 8px 24px;
+}
+.brand {
+  display: flex; align-items: center; gap: 10px;
+  min-height: var(--control-h);
+  color: var(--ink); text-decoration: none;
+  font-family: var(--font-head); font-weight: 700; font-size: 26px;
+}
+.brand svg { flex: none; }
+.nav { display: flex; flex-wrap: wrap; gap: 4px 20px; flex: 1 1 auto; }
+.nav__link {
+  min-height: var(--control-h); display: inline-flex; align-items: center; gap: 8px;
+  color: var(--ink); text-decoration: none; font-weight: 500; font-size: 15px;
+  border-bottom: 3px solid transparent;
+}
+.nav__link[aria-current="page"] { font-weight: 700; border-bottom-color: var(--lime); }
+.nav__badge {
+  min-width: 22px; padding: 0 7px; border-radius: 999px;
+  background: var(--ink); color: var(--on-ink);
+  font-family: var(--font-mono); font-size: 12px; line-height: 22px; text-align: center;
+}
+
+/* ── Page frame ─────────────────────────────────────────────────────────── */
+.banners { display: flex; flex-direction: column; }
+.page {
+  max-width: var(--page-width); margin: 0 auto;
+  padding: 40px var(--gutter) 80px;
+  display: flex; flex-direction: column; gap: 24px;
+}
+.page__title { font-size: clamp(30px, 4.4vw, 48px); letter-spacing: -0.02em; font-weight: 700; }
+.page__head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 24px; }
+.legal { color: var(--muted); font-size: var(--fs-small); }
+
+/* ── Intro on the download page ─────────────────────────────────────────── */
+.intro { display: flex; flex-direction: column; gap: 14px; }
+.intro__title {
+  font-size: clamp(40px, 6vw, 76px); font-weight: 700; letter-spacing: -0.03em; line-height: 1;
+}
+.intro__title mark {
+  background: var(--lime); color: var(--ink); padding: 0 10px; border-radius: var(--radius-s);
+  -webkit-box-decoration-break: clone; box-decoration-break: clone;
+}
+.intro__text { color: var(--muted); font-size: 19px; max-width: 560px; }
+
+@media (max-width: 560px) {
+  .page { padding-top: 24px; }
+  .brand { font-size: 22px; }
+}
+
+/* Arrows that point "back" must mirror in right-to-left languages. */
+[dir="rtl"] .icon--flip { transform: scaleX(-1); }

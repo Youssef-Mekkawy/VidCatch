@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+
+# Editors / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# User data from older versions that stored it next to the script
+/config.json
+/history.json
+/temp/
+
+# Downloaded media
+*.mp4
+*.mp3
+*.webm
+*.mkv
+*.srt
+/downloads/
