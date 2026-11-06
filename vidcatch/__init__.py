@@ -2,6 +2,3 @@
 
 __version__ = "1.0.0"
 APP_NAME = "VidCatch"
-
-# Shown in the footer and the About card when set. Leave empty to hide it.
-AUTHOR = ""

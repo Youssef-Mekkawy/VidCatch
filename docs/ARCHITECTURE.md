@@ -21,9 +21,6 @@ app-style window.
 Because the server is local, it can use the user's browser sign-in (cookies) and write to the
 user's disk. That is also why the server is locked down (see Security).
 
-> The original CustomTkinter desktop app (`app.py`, `ui/`, `theme.py`) still exists while the web
-> UI is being built. It uses the same engine modules.
-
 ## Modules
 
 | Module | Responsibility |
@@ -124,7 +121,7 @@ next run (HTTP Range). The folder is removed after success, by `discard_partial`
 `cleanup_old_partials` (older than 7 days, run at server start). If a resumed run fails with a range or
 corruption error, the folder is wiped and that download starts again once. The final file is staged as
 `<name>.tmp` in the destination folder and renamed over the target (`os.replace`), so the real name only ever
-points to a complete file. The Tk app still calls `download_media` without `resume` (old behaviour).
+points to a complete file.
 
 ## Queue
 
@@ -136,7 +133,6 @@ a restart turns `downloading` items into `paused`. Routes are in `server/queue_a
 ## Packaging
 
 `packaging/vidcatch.spec` builds a PyInstaller folder (`output/dist/VidCatch/`; everything the build creates goes under `output/`, which git ignores) from `packaging/vidcatch_entry.py`.
-The web files are bundled as data, yt-dlp is collected with all its extractors, and the old Tk window is left
-out. The app is windowed (no console), so the launcher logs to `server.log` in the data folder.
+The web files are bundled as data, yt-dlp is collected with all its extractors, and the old Tk window (removed in 1.0.0) is not part of it. The app is windowed (no console), so the launcher logs to `server.log` in the data folder.
 `packaging/smoke_test.py` starts the built program and checks `/api/status`; `build.ps1` runs the whole Windows
 build, and `.github/workflows/release.yml` does it for all three systems on a `v*` tag.

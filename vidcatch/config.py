@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 import os
-import shutil
 import sys
 import threading
 import time
@@ -104,30 +103,6 @@ def temp_dir() -> Path:
     path = default_temp_dir()
     path.mkdir(parents=True, exist_ok=True)
     return path
-
-
-def import_legacy_files(*folders: Path) -> list[str]:
-    """Copy config.json / history.json from an old project folder into the data folder.
-
-    Earlier versions stored these next to the script. Files are only copied when the
-    new location has no file of that name yet, so this is safe to call on every start.
-    Returns the names that were imported.
-    """
-    imported = []
-    for name in ("config.json", "history.json"):
-        target = data_dir() / name
-        if target.exists():
-            continue
-        for folder in folders:
-            source = Path(folder) / name
-            if source.is_file():
-                try:
-                    shutil.copy2(source, target)
-                    imported.append(name)
-                except OSError:
-                    pass
-                break
-    return imported
 
 
 # ── JSON helpers ────────────────────────────────────────────────────────────

@@ -8,6 +8,11 @@ First release under the name **VidCatch** (the project was called YouTube Downlo
 - Ready-to-run builds for Windows, Linux and macOS (PyInstaller, `packaging/`). A GitHub Actions workflow builds
   them when a version tag is pushed, smoke-tests each one, and attaches them with SHA-256 checksums to the release.
 
+### Removed
+- The old CustomTkinter desktop window (`app.py`, `ui/`, `theme.py`, `i18n.py`) and its dependencies
+  (`customtkinter`, `Pillow`). `python -m vidcatch` and the `vidcatch` command now start the web app.
+  The import of `config.json`/`history.json` files kept next to the script by very old versions is gone too.
+
 ### Renamed
 - The app, the Python package (`vidcatch`), the commands (`vidcatch`, `vidcatch-desktop`) and the data folder
   are now called VidCatch. An existing `YouTubeDownloader` data folder (settings, history, queue) is renamed

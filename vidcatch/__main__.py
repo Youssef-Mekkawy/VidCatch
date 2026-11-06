@@ -1,5 +1,5 @@
 """Allows `python -m vidcatch`."""
 
-from .app import main
+from .server.launcher import main
 
-main()
+raise SystemExit(main())

@@ -27,13 +27,21 @@ English and Arabic (RTL) interface.
 - Checks for a newer yt-dlp on start and updates it with one click (can be turned off in Settings)
 - Settings and history are stored in a per-user folder, not next to the code
 
-| History | Settings | Playlist |
-| --- | --- | --- |
-| ![History](docs/screenshots/history.png) | ![Settings](docs/screenshots/settings.png) | ![Playlist](docs/screenshots/playlist.png) |
+| Queue | History |
+| --- | --- |
+| ![Queue](docs/screenshots/queue.png) | ![History](docs/screenshots/history.png) |
+
+| Playlist | Settings |
+| --- | --- |
+| ![Playlist](docs/screenshots/playlist.png) | ![Settings](docs/screenshots/settings.png) |
+
+The interface also works fully right-to-left in Arabic:
+
+![Arabic interface](docs/screenshots/main-ar.png)
 
 > The screenshots use sample data.
 
-## Requirements
+## Requirements (to run from source)
 
 - Python 3.10 or newer
 - [FFmpeg](https://ffmpeg.org/) — needed to merge video and audio and to make MP3 files.
@@ -59,14 +67,14 @@ right-click the file, then Open). FFmpeg is not included; VidCatch offers to ins
 ## Install and run (from source)
 
 ```bash
-git clone https://github.com/<your-username>/VidCatch.git
+git clone https://github.com/Youssef-Mekkawy/VidCatch.git
 cd VidCatch
 
 python -m venv .venv
 # Windows: .venv\Scripts\activate      macOS/Linux: source .venv/bin/activate
 
 pip install -r requirements.txt
-python -m vidcatch.server        # opens VidCatch in your browser
+python -m vidcatch               # opens VidCatch in its own window (or your browser)
 ```
 
 Or install it as a package, which adds the `vidcatch` command:
@@ -95,7 +103,6 @@ Developer documentation: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) and [docs/
 The folder holds `config.json`, `history.json`, `queue.json` (the download queue) and a `temp/` folder (movable in Settings) used
 while downloading (it keeps the unfinished downloads under `partial_*` for up to 7 days).
 Data from the old name (`YouTubeDownloader`) is picked up automatically. Set the `YTDL_DATA_DIR` environment variable to use a different location.
-A `config.json` or `history.json` from an older version next to the script is imported on first start.
 
 ## Project structure
 
@@ -108,7 +115,6 @@ vidcatch/
   signin.py              Browser profiles and sign-in fetch (nothing is written to disk)
   system.py, updates.py  FFmpeg and JS runtime detection, yt-dlp update check
   errors.py              Error codes (see docs/ERRORS.md)
-  app.py, ui/            The older desktop (Tk) window, kept until the web version fully replaces it
 tests/                   pytest suite (no network needed)
 ```
 

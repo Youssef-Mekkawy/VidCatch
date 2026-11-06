@@ -380,6 +380,8 @@ async def events(request: Request) -> StreamingResponse:
                     yield ": keep-alive\n\n"
                     continue
                 yield f"data: {json.dumps(event)}\n\n"
+        except asyncio.CancelledError:
+            return  # the server is shutting down: end the stream quietly instead of logging a traceback
         finally:
             ctx.hub.unsubscribe(queue)
 

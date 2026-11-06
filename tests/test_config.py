@@ -103,26 +103,6 @@ class TestHistory:
         assert entry["title"] == "gone"
 
 
-class TestLegacyImport:
-    def test_copies_old_files_once(self, tmp_path):
-        old = tmp_path / "old_project"
-        old.mkdir()
-        (old / "config.json").write_text(json.dumps({"language": "ar"}), encoding="utf-8")
-        (old / "history.json").write_text(json.dumps([{"id": "1"}]), encoding="utf-8")
-
-        assert sorted(config.import_legacy_files(old)) == ["config.json", "history.json"]
-        assert config.load_config()["language"] == "ar"
-        assert config.load_history() == [{"id": "1"}]
-
-        # A second call must not overwrite what is already there.
-        config.save_config({**config.load_config(), "language": "en"})
-        assert config.import_legacy_files(old) == []
-        assert config.load_config()["language"] == "en"
-
-    def test_missing_folder_is_fine(self, tmp_path):
-        assert config.import_legacy_files(tmp_path / "nope") == []
-
-
 def test_signin_settings_defaults_and_validation():
     cfg = config.load_config()
     assert cfg["signin_consent"] == "ask"
