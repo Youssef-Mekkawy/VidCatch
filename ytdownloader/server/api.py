@@ -48,7 +48,7 @@ from ..system import (
     reveal_file,
 )
 from ..updates import can_self_update, fetch_latest_version, installed_version, is_newer
-from ..utils import find_existing_video, output_filename, sanitize_filename
+from ..utils import find_existing_video, plan_output
 from .events import EventHub
 from .jobs import Busy, JobManager, PlaylistParams, VideoParams
 from .platform_ui import pick_folder
@@ -70,6 +70,7 @@ class AppContext:
 
     hub: EventHub
     jobs: JobManager
+    queue: Any  # QueueManager
     shutdown: Any  # callable: stop the server
     restart: Any  # callable: start a fresh copy of the app, then stop this one
 
@@ -236,14 +237,10 @@ def start_download(body: DownloadIn, request: Request) -> dict:
     fmt = body.fmt
     quality = body.quality if fmt == "mp4" else None
     title = body.title.strip() or "video"
-    filename = output_filename(title, fmt, quality)
     sub_manual = body.sub_manual if fmt == "mp4" else []
     sub_auto = body.sub_auto if fmt == "mp4" else []
-    folder = Path(cfg["download_dir"]).expanduser()
-    if sub_manual or sub_auto:
-        # Video and subtitles together in a folder named after the video.
-        folder = folder / sanitize_filename(title)
-    final = folder / filename
+    # With subtitles, the video and its .srt files go together in a folder named after the video.
+    final, filename = plan_output(cfg["download_dir"], title, fmt, quality, bool(sub_manual or sub_auto))
 
     if body.subtitles_only:
         if not (sub_manual or sub_auto):
@@ -331,11 +328,23 @@ async def events(request: Request) -> StreamingResponse:
 # ── History ─────────────────────────────────────────────────────────────────
 @router.get("/history")
 def get_history() -> dict:
-    entries = []
+    """Newest first. Each entry says whether its file still exists and how big it is; `total_bytes`
+    and `existing` summarise what the downloads use on disk."""
+    entries, total, existing = [], 0, 0
     for entry in reversed(load_history()):
-        path = entry.get("filepath") or ""
-        entries.append({**entry, "exists": bool(path) and Path(path).is_file()})
-    return {"entries": entries}
+        path = Path(entry.get("filepath") or "")
+        size = 0
+        try:
+            if entry.get("filepath") and path.is_file():
+                size = path.stat().st_size
+        except OSError:
+            pass
+        exists = bool(entry.get("filepath")) and path.is_file()
+        if exists:
+            total += size
+            existing += 1
+        entries.append({**entry, "exists": exists, "size": size})
+    return {"entries": entries, "total_bytes": total, "existing": existing}
 
 
 @router.delete("/history")

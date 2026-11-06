@@ -102,3 +102,65 @@ class PlaylistDownloadIn(BaseModel):
         if value is not None and not _QUALITY.fullmatch(value):
             raise ValueError("Quality must look like 720p or best.")
         return value
+
+
+class QueueAddIn(BaseModel):
+    urls: list[str] = Field(min_length=1, max_length=500)
+    fmt: Literal["mp4", "mp3"] | None = None  # for just these links
+    quality: str | None = None
+    start: bool = False  # queue each one as soon as its info is loaded
+    partial: bool = False  # add what fits in the queue instead of refusing everything
+
+    @field_validator("quality")
+    @classmethod
+    def _quality(cls, value: str | None) -> str | None:
+        if value is not None and not _QUALITY.fullmatch(value):
+            raise ValueError("Quality must look like 720p or best.")
+        return value
+
+    @field_validator("urls")
+    @classmethod
+    def _urls(cls, value: list[str]) -> list[str]:
+        return [_check_url(v) for v in value]
+
+
+class QueueItemPatch(BaseModel):
+    fmt: Literal["mp4", "mp3"] | None = None
+    quality: str | None = None
+
+    @field_validator("quality")
+    @classmethod
+    def _quality(cls, value: str | None) -> str | None:
+        if value is not None and not _QUALITY.fullmatch(value):
+            raise ValueError("Quality must look like 720p or best.")
+        return value
+
+
+class QueueSettingsIn(BaseModel):
+    sub_langs: list[str] | None = Field(default=None, max_length=60)
+    on_exists: Literal["skip", "replace", "ask"] | None = None
+    fmt: Literal["mp4", "mp3"] | None = None
+    quality: str | None = None  # applied to every waiting video (closest available)
+
+    @field_validator("sub_langs")
+    @classmethod
+    def _langs(cls, value: list[str] | None) -> list[str] | None:
+        if value is not None and not all(re.fullmatch(r"[A-Za-z0-9_-]{1,20}", v) for v in value):
+            raise ValueError("Unknown subtitle language.")
+        return value
+
+    @field_validator("quality")
+    @classmethod
+    def _quality(cls, value: str | None) -> str | None:
+        if value is not None and not _QUALITY.fullmatch(value):
+            raise ValueError("Quality must look like 720p or best.")
+        return value
+
+
+class QueueRetryIn(BaseModel):
+    ids: list[str] | None = Field(default=None, max_length=50)
+    source: SourceIn | None = None
+
+
+class QueueDiscardIn(BaseModel):
+    discard: bool = False  # also delete the saved unfinished data of this video

@@ -159,7 +159,7 @@ def _watch_idle(server: uvicorn.Server, ctx, keep_running: bool) -> None:
         if now - last_tick > WATCH_INTERVAL + 10:  # the computer was asleep: give pages time to return
             hub.last_activity = now
         last_tick = now
-        if keep_running or jobs.any_running() or hub.count:
+        if keep_running or jobs.any_running() or ctx.queue.active() or hub.count:
             continue
         limit = IDLE_GRACE if hub.ever_connected else STARTUP_GRACE
         if now - hub.last_activity > limit:

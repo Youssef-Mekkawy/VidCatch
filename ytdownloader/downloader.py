@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import glob
+import hashlib
 import os
 import re
 import shutil
@@ -396,31 +397,157 @@ def _move_subtitles(job_dir: Path, final: Path) -> None:
         shutil.move(str(srt), str(target))
 
 
+PARTIAL_PREFIX = "partial_"
+PARTIAL_MAX_AGE_DAYS = 7
+_RESUME_FAILURE = re.compile(r"416|requested range|unable to resume|corrupt|moov atom|invalid data", re.I)
+
+
+def partial_key(url: str, opts: dict) -> str:
+    """Stable name for one download (video + format + quality), so a later run finds its partial data."""
+    match = re.search(r"(?:[?&]v=|youtu\.be/|/shorts/|/embed/)([\w-]{11})", url)
+    video = match.group(1) if match else url.strip()
+    raw = f"{video}|{opts.get('format', '')}|{opts.get('merge_output_format', '')}"
+    return hashlib.sha1(raw.encode("utf-8")).hexdigest()[:16]
+
+
+def partial_path(temp_root: str | os.PathLike, key: str) -> Path:
+    return Path(temp_root) / f"{PARTIAL_PREFIX}{key}"
+
+
+def _tree_size(folder: Path) -> int:
+    total = 0
+    for item in folder.rglob("*"):
+        try:
+            if item.is_file():
+                total += item.stat().st_size
+        except OSError:
+            continue
+    return total
+
+
+def partial_usage(temp_root: str | os.PathLike) -> int:
+    """Bytes used by unfinished downloads that can still be resumed."""
+    root = Path(temp_root)
+    if not root.is_dir():
+        return 0
+    return sum(_tree_size(c) for c in root.iterdir() if c.is_dir() and c.name.startswith(PARTIAL_PREFIX))
+
+
+def discard_partial(temp_root: str | os.PathLike, key: str | None = None) -> None:
+    """Delete one unfinished download (by key) or all of them."""
+    root = Path(temp_root)
+    if key is not None:
+        shutil.rmtree(partial_path(root, key), ignore_errors=True)
+        return
+    if root.is_dir():
+        for child in root.iterdir():
+            if child.is_dir() and child.name.startswith(PARTIAL_PREFIX):
+                shutil.rmtree(child, ignore_errors=True)
+
+
+def partial_days_left(temp_root: str | os.PathLike, max_age_days: int = PARTIAL_MAX_AGE_DAYS) -> int | None:
+    """Days until the oldest unfinished download is deleted (0 = today), or None when there is none."""
+    root = Path(temp_root)
+    if not root.is_dir():
+        return None
+    now = time.time()
+    left: list[int] = []
+    for child in root.iterdir():
+        if not (child.is_dir() and child.name.startswith(PARTIAL_PREFIX)):
+            continue
+        try:
+            newest = max([child.stat().st_mtime, *(f.stat().st_mtime for f in child.rglob("*"))])
+        except OSError:
+            continue
+        left.append(max(0, max_age_days - int((now - newest) // 86400)))
+    return min(left) if left else None
+
+
+def cleanup_old_partials(temp_root: str | os.PathLike, max_age_days: int = PARTIAL_MAX_AGE_DAYS) -> int:
+    """Delete unfinished downloads nobody touched for `max_age_days`. Returns how many were removed."""
+    root = Path(temp_root)
+    if not root.is_dir():
+        return 0
+    limit = time.time() - max_age_days * 86400
+    removed = 0
+    for child in root.iterdir():
+        if not (child.is_dir() and child.name.startswith(PARTIAL_PREFIX)):
+            continue
+        try:
+            newest = max([child.stat().st_mtime, *(f.stat().st_mtime for f in child.rglob("*"))])
+        except OSError:
+            continue
+        if newest < limit:
+            shutil.rmtree(child, ignore_errors=True)
+            removed += 1
+    return removed
+
+
+def _safe_move(source: Path, final: Path) -> None:
+    """Put `source` at `final` so that `final` is either the old file or the complete new one.
+
+    The file is first copied/moved next to the destination under a temporary name and then renamed
+    over it, so a crash in the middle never leaves a half-written video under the real name."""
+    final.parent.mkdir(parents=True, exist_ok=True)
+    staging = final.with_name(final.name + ".tmp")
+    staging.unlink(missing_ok=True)
+    try:
+        shutil.move(str(source), str(staging))
+        os.replace(staging, final)
+    finally:
+        staging.unlink(missing_ok=True)
+
+
 def download_media(
-    url: str, opts: dict, temp_root: str | os.PathLike, output_path: str | os.PathLike
+    url: str,
+    opts: dict,
+    temp_root: str | os.PathLike,
+    output_path: str | os.PathLike,
+    resume: bool = False,
 ) -> tuple[str, dict]:
-    """Download one video/audio file into a private temp folder, then move it to output_path.
+    """Download one video/audio file, then move it to output_path.
 
     Returns (final_path, info). Raises DownloadCancelled / yt-dlp errors / FileNotFoundError.
-    The temp folder is always removed, so a failed or cancelled download leaves nothing behind.
+
+    resume=False: a private temp folder that is always removed (a failed or cancelled download leaves
+    nothing behind). resume=True: a stable folder per video+format+quality that is KEPT when the download
+    is cancelled or fails, so the next run continues from the `.part` files; it is deleted after success.
     """
     Path(temp_root).mkdir(parents=True, exist_ok=True)
-    job_dir = Path(tempfile.mkdtemp(prefix="job_", dir=temp_root))
+    if resume:
+        job_dir = partial_path(temp_root, partial_key(url, opts))
+        job_dir.mkdir(parents=True, exist_ok=True)
+    else:
+        job_dir = Path(tempfile.mkdtemp(prefix="job_", dir=temp_root))
+    keep = resume
     try:
         run_opts = dict(opts)
         run_opts["outtmpl"] = str(job_dir / "%(id)s.%(ext)s")
-        with yt_dlp.YoutubeDL(run_opts) as ydl:
-            info = ydl.extract_info(url, download=True)
+        run_opts["continuedl"] = True
+        had_data = resume and any(job_dir.iterdir())
+        try:
+            with yt_dlp.YoutubeDL(run_opts) as ydl:
+                info = ydl.extract_info(url, download=True)
+        except DownloadCancelled:
+            raise
+        except Exception as exc:
+            if not (had_data and _RESUME_FAILURE.search(str(exc))):
+                raise
+            # The saved partial data is damaged or no longer matches the video: start that download again.
+            shutil.rmtree(job_dir, ignore_errors=True)
+            job_dir.mkdir(parents=True, exist_ok=True)
+            with yt_dlp.YoutubeDL(run_opts) as ydl:
+                info = ydl.extract_info(url, download=True)
 
         media = _locate_media(info, job_dir)
         final = Path(output_path)
-        final.parent.mkdir(parents=True, exist_ok=True)
-        final.unlink(missing_ok=True)
-        shutil.move(str(media), str(final))
+        _safe_move(media, final)
         _move_subtitles(job_dir, final)
+        keep = False
         return str(final), info
     finally:
-        shutil.rmtree(job_dir, ignore_errors=True)
+        if not keep:
+            shutil.rmtree(job_dir, ignore_errors=True)
 
 
 def download_subtitles_only(

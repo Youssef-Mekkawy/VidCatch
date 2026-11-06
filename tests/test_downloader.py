@@ -1,4 +1,6 @@
+import os
 import threading
+import time
 from pathlib import Path
 
 import pytest
@@ -10,13 +12,19 @@ from ytdownloader.downloader import (
     base_options,
     build_download_options,
     clean_error,
+    cleanup_old_partials,
     cleanup_stale_temp,
+    discard_partial,
     download_media,
     entry_thumbnail,
     entry_url,
     extract_formats,
     fetch_video_info,
     make_progress_hook,
+    partial_days_left,
+    partial_key,
+    partial_path,
+    partial_usage,
     pick_quality,
 )
 
@@ -417,3 +425,113 @@ def test_fallback_does_not_retry_cancel_or_unrelated_errors(monkeypatch):
         with pytest.raises(type(exc)):
             downloader.with_js_fallback(run)
         assert calls == [False]
+
+
+# ── Resume: partial data is kept between runs ───────────────────────────────
+class TestResume:
+    URL = "https://www.youtube.com/watch?v=abcdefghijk"
+
+    def test_key_is_stable_across_url_forms_and_differs_by_quality(self):
+        a = partial_key(self.URL, {"format": "best[height<=720]"})
+        assert a == partial_key("https://youtu.be/abcdefghijk?t=5", {"format": "best[height<=720]"})
+        assert a != partial_key(self.URL, {"format": "best[height<=480]"})
+        assert a != partial_key("https://www.youtube.com/watch?v=zzzzzzzzzzz", {"format": "best[height<=720]"})
+
+    def test_cancelled_download_keeps_its_partial_folder(self, fake_ydl, tmp_path):
+        fake_ydl.error = DownloadCancelled("Cancelled.")
+        temp = tmp_path / "temp"
+        opts = {"format": "best"}
+        with pytest.raises(DownloadCancelled):
+            download_media(self.URL, opts, temp, tmp_path / "o.mp4", resume=True)
+        folder = partial_path(temp, partial_key(self.URL, opts))
+        assert folder.is_dir()
+        assert not (tmp_path / "o.mp4").exists()
+
+    def test_next_run_uses_the_same_folder_and_removes_it_on_success(self, fake_ydl, tmp_path):
+        temp = tmp_path / "temp"
+        opts = {"format": "best"}
+        folder = partial_path(temp, partial_key(self.URL, opts))
+        folder.mkdir(parents=True)
+        (folder / "abc.mp4.part").write_bytes(b"half")
+        out = tmp_path / "o.mp4"
+        download_media(self.URL, opts, temp, out, resume=True)
+        assert fake_ydl.instances[-1].opts["outtmpl"].startswith(str(folder))
+        assert fake_ydl.instances[-1].opts["continuedl"] is True
+        assert out.read_bytes() == b"video"
+        assert not folder.exists()
+
+    def test_damaged_partial_data_is_dropped_and_downloaded_again(self, fake_ydl, tmp_path, monkeypatch):
+        temp = tmp_path / "temp"
+        opts = {"format": "best"}
+        folder = partial_path(temp, partial_key(self.URL, opts))
+        folder.mkdir(parents=True)
+        (folder / "abc.mp4.part").write_bytes(b"bad")
+        calls = {"n": 0}
+        real = FakeYDL.extract_info
+
+        def flaky(self, url, download=True):
+            calls["n"] += 1
+            if calls["n"] == 1:
+                raise RuntimeError("HTTP Error 416: Requested range not satisfiable")
+            assert not (folder / "abc.mp4.part").exists()
+            return real(self, url, download)
+
+        monkeypatch.setattr(FakeYDL, "extract_info", flaky)
+        out = tmp_path / "o.mp4"
+        download_media(self.URL, opts, temp, out, resume=True)
+        assert calls["n"] == 2 and out.read_bytes() == b"video"
+
+    def test_other_errors_do_not_trigger_a_restart(self, fake_ydl, tmp_path):
+        temp = tmp_path / "temp"
+        opts = {"format": "best"}
+        folder = partial_path(temp, partial_key(self.URL, opts))
+        folder.mkdir(parents=True)
+        (folder / "abc.mp4.part").write_bytes(b"half")
+        fake_ydl.error = RuntimeError("Video unavailable")
+        with pytest.raises(RuntimeError):
+            download_media(self.URL, opts, temp, tmp_path / "o.mp4", resume=True)
+        assert (folder / "abc.mp4.part").read_bytes() == b"half"
+
+    def test_usage_discard_and_old_cleanup(self, tmp_path):
+        temp = tmp_path / "temp"
+        old, new = partial_path(temp, "old"), partial_path(temp, "new")
+        for folder, size in ((old, 100), (new, 50)):
+            folder.mkdir(parents=True)
+            (folder / "x.part").write_bytes(b"x" * size)
+        (temp / "job_keep").mkdir()
+        assert partial_usage(temp) == 150
+        stamp = time.time() - 8 * 86400
+        os.utime(old / "x.part", (stamp, stamp))
+        os.utime(old, (stamp, stamp))
+        assert cleanup_old_partials(temp) == 1
+        assert not old.exists() and new.exists()
+        discard_partial(temp)
+        assert not new.exists() and (temp / "job_keep").exists()
+
+
+class TestSafeFinish:
+    def test_failed_move_keeps_the_old_file_and_leaves_no_temp(self, fake_ydl, tmp_path, monkeypatch):
+        out = tmp_path / "o.mp4"
+        out.write_bytes(b"old")
+
+        def boom(src, dst):
+            raise OSError("disk full")
+
+        monkeypatch.setattr(downloader.os, "replace", boom)
+        with pytest.raises(OSError):
+            download_media("http://x", {}, tmp_path / "temp", out)
+        assert out.read_bytes() == b"old"
+        assert not (tmp_path / "o.mp4.tmp").exists()
+
+
+def test_partial_days_left_counts_down_to_the_cleanup(tmp_path):
+    temp = tmp_path / "temp"
+    assert partial_days_left(temp) is None
+    fresh, aging = partial_path(temp, "fresh"), partial_path(temp, "aging")
+    for folder in (fresh, aging):
+        folder.mkdir(parents=True)
+        (folder / "x.part").write_bytes(b"x")
+    stamp = time.time() - 6 * 86400
+    os.utime(aging / "x.part", (stamp, stamp))
+    os.utime(aging, (stamp, stamp))
+    assert partial_days_left(temp) == 1

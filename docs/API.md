@@ -127,11 +127,48 @@ already finished).
 Keep the stream open while the page is open: **the server exits about 45 seconds after the last
 page disconnects**, unless a task is running or `--keep-running` was given.
 
+## Queue
+
+Several single videos, downloaded one at a time. State is saved in `queue.json` in the data folder, so
+the queue survives closing the app. Each video runs as a normal `video` job (same progress, sign-in
+fallback, history and subtitle rules). See `docs/PLAN_QUEUE_RESUME.md`.
+
+The Playlist page sends its selected videos here. `POST /api/playlists/download` (a separate, non-resumable playlist job) is still available but the web UI no longer uses it.
+
+Item `status`: `fetching`, `ready`, `queued`, `downloading`, `paused`, `exists` (file on disk, waiting for
+the user), `done`, `skipped`, `cancelled`, `failed` (with `error.problem`, an E-code).
+
+| Method | Path | Body / query | Result |
+|---|---|---|---|
+| GET | `/api/queue` | | `state` (`idle`/`running`/`paused`), `halted` (`disk_full` or empty), `settings`, `items`, `counts`, `estimate_bytes`, `partial_bytes`, `free_bytes`, `max_items` |
+| POST | `/api/queue/items` | `{"urls": [...], "fmt"?, "quality"?, "start"?, "partial"?}` (the queue holds 50 in total) | `{"added": [ids], "duplicates": n, "left_out": n}`; 422 above the limit unless `partial` is true (add what fits). `fmt`/`quality` apply to just these links, `start` queues each as soon as its info is loaded (the Playlist page uses all three). Metadata loads in the background |
+| PATCH | `/api/queue/items/{id}` | `{"fmt"?, "quality"?}` | quality falls back to the closest lower one |
+| DELETE | `/api/queue/items/{id}` | `?discard=true` also deletes its unfinished data | stops it first if it is downloading |
+| POST | `/api/queue/items/{id}/cancel` | `{"discard": bool}` | cancel one video, the queue goes on |
+| POST | `/api/queue/items/{id}/exists` | `?replace=true|false` | answer for an item in status `exists` |
+| PUT | `/api/queue/settings` | `{"sub_langs"?, "on_exists"?: skip/replace/ask, "fmt"?, "quality"?}` | `quality` is applied to every waiting video |
+| POST | `/api/queue/start` | | queue every `ready`/`paused` item and start the runner |
+| POST | `/api/queue/pause` | | stops the current download, keeps its unfinished data, starts nothing else |
+| POST | `/api/queue/resume` | | same as start |
+| POST | `/api/queue/retry` | `{"ids"?, "source"?}` | failed/cancelled (and named skipped) items go back to the queue; `source` = signed-in browser profile |
+| POST | `/api/queue/clear-finished` | | removes done, skipped and cancelled items |
+| DELETE | `/api/queue/partials` | | deletes all unfinished data; 409 while running |
+
+Subtitles: `sub_langs` is one preference for the whole batch. Each video gets the languages from it that it
+really has (channel subtitles, or its original automatic caption); the others are skipped silently.
+Items listed with `sub_manual`/`sub_auto` show what will be downloaded.
+
+Events: `queue_changed` (reload `GET /api/queue`) and `queue_progress` (`id`, `percent`, `speed`, `eta`,
+`phase`, sent about twice a second for the running item).
+
+The server does not exit while the queue is running. With the `queue_auto_resume` setting on, unfinished
+items continue by themselves when the app starts.
+
 ## History and folders
 
 | Route | Description |
 | --- | --- |
-| `GET /api/history` | `{entries}`, newest first. Each entry has `id, title, channel, url, format, quality, filesize, filename, filepath, thumbnail, date` plus `exists` (is the file still there). |
+| `GET /api/history` | `{entries}`, newest first. Each entry has `id, title, channel, url, format, quality, filesize, filename, filepath, thumbnail, date` plus `exists` (is the file still there) and `size` (bytes on disk, 0 if gone). The response also has `total_bytes` (all existing files) and `existing` (how many). |
 | `DELETE /api/history` | Clear all. |
 | `DELETE /api/history/{id}` | Remove one. |
 | `POST /api/history/{id}/reveal` | Show the file in the file manager. The path comes from the history file, never from the request. |

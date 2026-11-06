@@ -56,7 +56,7 @@ INFO = {
 }
 
 
-def fake_download(url, opts, temp_root, output_path):
+def fake_download(url, opts, temp_root, output_path, **_):
     """Stands in for yt-dlp: reports progress through the real hook, writes the file."""
     hook = opts["progress_hooks"][0]
     hook({"status": "downloading", "downloaded_bytes": 50, "total_bytes": 100,
@@ -251,7 +251,7 @@ def test_existing_file_needs_confirmation(client, app, monkeypatch, download_dir
 def test_only_one_download_at_a_time_and_cancel(client, app, monkeypatch, download_dir):
     release = threading.Event()
 
-    def slow(url, opts, temp_root, output_path):
+    def slow(url, opts, temp_root, output_path, **_):
         hook = opts["progress_hooks"][0]
         while not release.is_set():
             hook({"status": "downloading", "downloaded_bytes": 1, "total_bytes": 100})
@@ -275,7 +275,7 @@ def test_only_one_download_at_a_time_and_cancel(client, app, monkeypatch, downlo
 
 
 def test_failed_download_that_needs_sign_in_is_flagged(client, app, monkeypatch, download_dir):
-    def refuse(url, opts, temp_root, output_path):
+    def refuse(url, opts, temp_root, output_path, **_):
         raise RuntimeError("ERROR: Sign in to confirm your age. This video may be inappropriate")
 
     monkeypatch.setattr(jobs, "download_media", refuse)
@@ -291,7 +291,7 @@ def test_failed_download_that_needs_sign_in_is_flagged(client, app, monkeypatch,
 
 
 def test_other_download_errors_are_plain_failures(client, app, monkeypatch, download_dir):
-    def broken(url, opts, temp_root, output_path):
+    def broken(url, opts, temp_root, output_path, **_):
         raise RuntimeError("ERROR: Video unavailable")
 
     monkeypatch.setattr(jobs, "download_media", broken)
@@ -313,7 +313,7 @@ def test_playlist_download_counts_done_skipped_failed(client, app, monkeypatch, 
     download_dir.mkdir(parents=True)
     (download_dir / "Two_720p.mp4").write_bytes(b"old")
 
-    def flaky(url, opts, temp_root, output_path):
+    def flaky(url, opts, temp_root, output_path, **_):
         if "bad" in url:
             raise RuntimeError("ERROR: Video unavailable")
         return fake_download(url, opts, temp_root, output_path)
@@ -339,7 +339,7 @@ def test_playlist_item_that_needs_sign_in_retries_with_cookies_only_when_allowed
 ):
     seen = []
 
-    def gated(url, opts, temp_root, output_path):
+    def gated(url, opts, temp_root, output_path, **_):
         seen.append(opts.get("cookiesfrombrowser"))
         if not opts.get("cookiesfrombrowser"):
             raise RuntimeError("ERROR: Sign in to confirm you're not a bot")
@@ -365,7 +365,7 @@ def test_playlist_item_that_needs_sign_in_retries_with_cookies_only_when_allowed
 def test_playlist_cancel(client, app, monkeypatch, download_dir):
     started = threading.Event()
 
-    def blocking(url, opts, temp_root, output_path):
+    def blocking(url, opts, temp_root, output_path, **_):
         hook = opts["progress_hooks"][0]
         started.set()
         while True:
@@ -456,7 +456,7 @@ def test_shutdown_and_restart_refuse_while_busy(app, monkeypatch, download_dir):
 
     release = threading.Event()
 
-    def slow(url, opts, temp_root, output_path):
+    def slow(url, opts, temp_root, output_path, **_):
         release.wait(2)
         return fake_download(url, opts, temp_root, output_path)
 
@@ -470,7 +470,7 @@ def test_video_is_kept_when_only_the_subtitles_fail(app, client, download_dir, m
     """YouTube answers 429 for subtitles much sooner than for the video itself."""
     calls = []
 
-    def flaky(url, opts, temp_root, output_path):
+    def flaky(url, opts, temp_root, output_path, **_):
         calls.append(bool(opts.get("writeautomaticsub")))
         if opts.get("writeautomaticsub"):
             raise RuntimeError("Unable to download video subtitles for 'en': HTTP Error 429: Too Many Requests")
@@ -500,7 +500,7 @@ def test_subtitle_tracks_group_every_language():
 def test_chosen_subtitles_go_with_the_video_into_a_folder(app, client, download_dir, monkeypatch):
     seen = {}
 
-    def spy(url, opts, temp_root, output_path):
+    def spy(url, opts, temp_root, output_path, **_):
         seen.update(langs=opts.get("subtitleslangs"), manual=opts.get("writesubtitles"),
                     auto=opts.get("writeautomaticsub"), path=output_path)
         return fake_download(url, opts, temp_root, output_path)
@@ -632,3 +632,16 @@ def test_history_clear_all_can_delete_files(client, download_dir):
     add_history_entry({"id": "b", "title": "B", "filepath": str(gone)})
     assert client.delete("/api/history?delete_files=true").json()["deleted"] == 1
     assert not gone.exists() and kept.exists()
+
+
+def test_history_reports_sizes_and_the_total_on_disk(client, tmp_path):
+    first, second = tmp_path / "a.mp4", tmp_path / "b.mp4"
+    first.write_bytes(b"x" * 1000)
+    second.write_bytes(b"x" * 500)
+    add_history_entry({"id": "a", "title": "A", "filepath": str(first)})
+    add_history_entry({"id": "b", "title": "B", "filepath": str(second)})
+    add_history_entry({"id": "c", "title": "C", "filepath": str(tmp_path / "gone.mp4")})
+    data = client.get("/api/history").json()
+    assert data["total_bytes"] == 1500 and data["existing"] == 2
+    sizes = {e["id"]: e["size"] for e in data["entries"]}
+    assert sizes == {"a": 1000, "b": 500, "c": 0}

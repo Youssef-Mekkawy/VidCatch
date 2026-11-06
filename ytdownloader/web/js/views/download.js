@@ -8,6 +8,7 @@ import { ApiError, api } from "../lib/api.js";
 import { h, icon, playMark } from "../lib/dom.js";
 import { formatBytes, isYoutubeLink } from "../lib/format.js";
 import { t } from "../lib/i18n.js";
+import { languageName } from "../lib/languages.js";
 import { app, activeJob, emit, on, toast } from "../state.js";
 import { confirmDialog } from "../components/dialog.js";
 import { renderNotice } from "../components/notice.js";
@@ -74,7 +75,7 @@ function applyFetched(result, url) {
   if (result.type === "playlist") {
     const s = app.settings;
     app.playlist = {
-      ...result.playlist, url, jobId: null,
+      ...result.playlist, url,
       checked: result.playlist.entries.map(() => true),
       fmt: s.default_format, quality: s.default_quality,
     };
@@ -299,15 +300,6 @@ export function mountDownload(outlet) {
           h("button", { type: "button", "aria-pressed": String(key === value), onclick: () => onPick(key) }, text))),
     );
   }
-
-  const languageName = (code) => {
-    try {
-      const base = code.replace(/-orig$/, "");
-      return new Intl.DisplayNames([document.documentElement.lang || "en"], { type: "language" }).of(base) || base;
-    } catch (error) {
-      return code;
-    }
-  };
 
   function toggle(list, code) {
     return list.includes(code) ? list.filter((c) => c !== code) : [...list, code];

@@ -10,14 +10,17 @@ import { mountBanners, checkUpdates } from "./components/banners.js";
 import { mountDownload } from "./views/download.js";
 import { mountHistory, refreshHistoryCount } from "./views/history.js";
 import { mountPlaylist } from "./views/playlist.js";
+import { mountQueue, refreshQueueCount } from "./views/queue.js";
 import { mountSettings } from "./views/settings.js";
 
-const ROUTES = { "#/": mountDownload, "#/playlist": mountPlaylist, "#/history": mountHistory, "#/settings": mountSettings };
+const ROUTES = { "#/": mountDownload, "#/playlist": mountPlaylist, "#/queue": mountQueue, "#/history": mountHistory, "#/settings": mountSettings };
 const root = document.getElementById("app");
 let unmount = null;
 let bannersStop = null;
 let overlay = null;
 let badgeEl = null;
+let queueBadgeEl = null;
+on("queue_count", () => { if (queueBadgeEl) { queueBadgeEl.textContent = String(app.queueCount); queueBadgeEl.hidden = !app.queueCount; } });
 on("history_count", () => { if (badgeEl) { badgeEl.textContent = String(app.historyCount); badgeEl.hidden = !app.historyCount; } });
 on("language", () => { document.title = t("title"); buildShell(); });
 
@@ -54,13 +57,15 @@ function buildShell() {
       await setLanguage(next);
       buildShell();
     } }, t("lang_switch"));
+  const queueBadge = h("span", { class: "nav__badge", hidden: !app.queueCount }, String(app.queueCount));
   badgeEl = badge;
+  queueBadgeEl = queueBadge;
   const banners = h("div", { class: "banners" });
   const outlet = h("main", { id: "view" });
   root.replaceChildren(
     h("header", { class: "header" }, h("div", { class: "header__inner" },
       h("a", { class: "brand", href: "#/" }, logo(34), t("title")),
-      h("nav", { class: "nav" }, link("#/", t("tab_download")), link("#/history", t("tab_history"), badge), link("#/settings", t("settings_title"))),
+      h("nav", { class: "nav" }, link("#/", t("tab_download")), link("#/queue", t("tab_queue"), queueBadge), link("#/history", t("tab_history"), badge), link("#/settings", t("settings_title"))),
       lang)),
     banners, outlet);
   bannersStop?.();
@@ -104,6 +109,11 @@ async function start() {
       else if (event.type === "job") {
         app.jobs[event.job.id] = event.job;
         emit("job", event.job);
+      } else if (event.type === "queue_changed") {
+        emit("queue_changed");
+        refreshQueueCount();
+      } else if (event.type === "queue_progress") {
+        emit("queue_progress", event);
       } else if (event.type === "history_changed") {
         emit("history_changed");
         refreshHistoryCount();
@@ -115,6 +125,7 @@ async function start() {
   addEventListener("hashchange", route);
   buildShell();
   refreshHistoryCount();
+  refreshQueueCount();
   checkUpdates();
 }
 

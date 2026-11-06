@@ -1,6 +1,7 @@
 // History page: past downloads, newest first.
 
 import { api } from "../lib/api.js";
+import { formatBytes } from "../lib/format.js";
 import { h, icon } from "../lib/dom.js";
 import { t } from "../lib/i18n.js";
 import { app, on, toast, emit } from "../state.js";
@@ -8,12 +9,12 @@ import { choiceDialog } from "../components/dialog.js";
 
 export async function refreshHistoryCount() {
   try {
-    const { entries } = await api.history();
-    app.historyCount = entries.length;
+    const data = await api.history();
+    app.historyCount = data.entries.length;
     emit("history_count");
-    return entries;
+    return data;
   } catch (error) {
-    return [];
+    return { entries: [], total_bytes: 0, existing: 0 };
   }
 }
 
@@ -25,11 +26,12 @@ function dateText(value) {
 export function mountHistory(outlet) {
   const clearBtn = h("button", { class: "btn btn--danger btn--small", type: "button", onclick: clearAll }, icon("trash", 18), t("history_clear"));
   const pruneBtn = h("button", { class: "btn btn--small", type: "button", hidden: true, onclick: prune }, icon("trash", 18), t("history_prune"));
+  const summary = h("p", { class: "muted history__summary", hidden: true });
   const body = h("div", {});
   outlet.replaceChildren(
     h("section", { class: "page" },
       h("div", { class: "page__head" }, h("h1", { class: "page__title" }, t("history_title")), h("div", { class: "row" }, pruneBtn, clearBtn)),
-      body),
+      summary, body),
   );
 
   async function clearAll() {
@@ -84,7 +86,7 @@ export function mountHistory(outlet) {
         h("div", { class: "item__title" }, entry.title || entry.filename),
         h("div", { class: "item__sub" },
           [entry.channel, dateText(entry.date)].filter(Boolean).join(" · ")),
-        h("div", {}, h("span", { class: "format" }, [String(entry.format || "").toUpperCase(), entry.quality].filter(Boolean).join(" ")),
+        h("div", {}, h("span", { class: "format" }, [String(entry.format || "").toUpperCase(), entry.quality, formatBytes(entry.size)].filter(Boolean).join(" · ")),
           !entry.exists && h("span", { class: "hint" }, ` ${t("history_file_gone")}`))),
       h("div", { class: "item__actions" },
         h("button", { class: "btn btn--small", type: "button", disabled: !entry.exists, onclick: () => api.revealHistory(entry.id).catch((e) => toast(e.message)) }, icon("folder", 18), t("history_open_file")),
@@ -92,7 +94,9 @@ export function mountHistory(outlet) {
   }
 
   async function load() {
-    const entries = await refreshHistoryCount();
+    const { entries, total_bytes: total, existing } = await refreshHistoryCount();
+    summary.textContent = existing ? t("history_summary", { n: existing, size: formatBytes(total) }) : "";
+    summary.hidden = !existing;
     clearBtn.hidden = !entries.length;
     const missing = entries.filter((e) => !e.exists).length;
     pruneBtn.hidden = !missing;

@@ -7,6 +7,7 @@ export const app = {
   settings: null, // GET /api/settings
   jobs: {}, // job id -> latest job object from the server
   historyCount: 0,
+  queueCount: 0, // videos in the queue that are not finished
 
   // Download page
   download: {
@@ -24,7 +25,7 @@ export const app = {
   },
 
   // Playlist page (null until a playlist link was fetched)
-  playlist: null, // {title, channel, entries, checked[], fmt, quality, jobId, url}
+  playlist: null, // {title, channel, entries, checked[], fmt, quality, url}
 };
 
 const bus = new EventTarget();

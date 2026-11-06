@@ -87,6 +87,19 @@ def output_filename(title: str, fmt: str, quality: str | None = None) -> str:
     return f"{sanitize_filename(title)}{suffix}.{ext}"
 
 
+def plan_output(download_dir, title: str, fmt: str, quality: str | None, with_subtitles: bool):
+    """Where a download will be saved: (full path, file name).
+
+    With subtitles the video goes in a folder named after it, together with its .srt files."""
+    from pathlib import Path
+
+    filename = output_filename(title, fmt, quality)
+    folder = Path(download_dir).expanduser()
+    if with_subtitles:
+        folder = folder / sanitize_filename(title)
+    return folder / filename, filename
+
+
 def parse_height(label: str | None) -> int | None:
     """'1080p' -> 1080. Returns None for 'best' or anything unparsable."""
     if not label:

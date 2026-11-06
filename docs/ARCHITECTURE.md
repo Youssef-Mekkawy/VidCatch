@@ -28,7 +28,7 @@ user's disk. That is also why the server is locked down (see Security).
 
 | Module | Responsibility |
 | --- | --- |
-| `downloader.py` | yt-dlp options, metadata, progress hook, download to a temp folder then move. JS-runtime retry. No UI code. |
+| `downloader.py` | yt-dlp options, metadata, progress hook, download to a temp folder then move. With `resume=True` the folder is a stable `partial_<key>` that survives cancel/failure (see below). JS-runtime retry. No UI code. |
 | `signin.py` | Find browser profiles, check (offline) which ones hold a YouTube sign-in, fetch with each. Never writes cookies anywhere. |
 | `config.py` | `config.json` and `history.json` in the per-user data folder; validation of settings updates. |
 | `system.py` | OS helpers: FFmpeg, JavaScript runtime, browser profile folders, open folder. |
@@ -114,3 +114,21 @@ The server can read browser cookies and write files, so a random web page must n
 in-process with fake downloads; `tests/test_server_process.py` starts the real server in a
 subprocess (cookie hand-off, event stream, single instance, idle exit); `tests/test_server_security.py`
 checks the Host/Origin/cookie rules.
+
+
+## Resumable downloads
+
+`download_media(..., resume=True)` (used by the web jobs) downloads into `temp/partial_<key>/`, where the
+key is a hash of video id + format + quality. yt-dlp keeps `.part` files there and continues from them on the
+next run (HTTP Range). The folder is removed after success, by `discard_partial`, or by
+`cleanup_old_partials` (older than 7 days, run at server start). If a resumed run fails with a range or
+corruption error, the folder is wiped and that download starts again once. The final file is staged as
+`<name>.tmp` in the destination folder and renamed over the target (`os.replace`), so the real name only ever
+points to a complete file. The Tk app still calls `download_media` without `resume` (old behaviour).
+
+## Queue
+
+`server/queue_manager.py` keeps the queue (`queue.json`, atomic writes) and runs one background thread that
+starts each item as a normal `video` job and waits for it (`Job.finished`). Metadata for newly added links is
+fetched by a second thread, one link at a time. Pause cancels the running job and keeps its partial folder;
+a restart turns `downloading` items into `paused`. Routes are in `server/queue_api.py`.

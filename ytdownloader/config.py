@@ -30,6 +30,7 @@ DEFAULT_CONFIG: dict = {
     "cookies_profile": "",  # browser profile folder name, "" = the browser's main profile
     "signin_consent": "ask",  # "ask" (not decided yet) | "allow" | "never"
     "check_updates": True,
+    "queue_auto_resume": False,  # continue unfinished queue items when the app starts
 }
 
 # Browsers yt-dlp can read cookies from ('' = automatic).

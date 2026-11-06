@@ -72,6 +72,7 @@ class Job:
     cancelling: bool = False
     started: float = field(default_factory=time.time)
     cancel_event: threading.Event = field(default_factory=threading.Event, repr=False)
+    finished: threading.Event = field(default_factory=threading.Event, repr=False)  # set when the thread ends
     _lock: threading.Lock = field(default_factory=threading.Lock, repr=False)
     _on_change: Callable[[Job], None] | None = field(default=None, repr=False)
 
@@ -190,6 +191,7 @@ class JobManager:
                     error={"code": "internal", "message": clean_error(exc), "problem": "E910"},
                 )
             finally:
+                job.finished.set()
                 self._prune()
 
         self._publish(job)
@@ -257,7 +259,7 @@ class JobManager:
                     sub_manual=list(p.sub_manual) if with_subtitles else None,
                     sub_auto=list(p.sub_auto) if with_subtitles else None,
                 )
-                return download_media(p.url, opts, temp_dir(), p.final)
+                return download_media(p.url, opts, temp_dir(), p.final, resume=True)
 
             return run
 
@@ -384,7 +386,7 @@ class JobManager:
     def _download_item(url: str, p: PlaylistParams, final: Path, hook, cookies):
         def attempt(js: bool):
             opts = build_download_options(p.fmt, p.quality, "none", hook, cookies=cookies, js=js)
-            return download_media(url, opts, temp_dir(), final)
+            return download_media(url, opts, temp_dir(), final, resume=True)
 
         return with_js_fallback(attempt)
 

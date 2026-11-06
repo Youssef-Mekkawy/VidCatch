@@ -23,7 +23,7 @@ export function getLanguage() {
   return current;
 }
 
-/** t("playlist_summary", {done: 2}) - {name} placeholders are replaced; unknown keys show the key. */
+/** t("queue_added", {n: 2}) - {name} placeholders are replaced; unknown keys show the key. */
 export function t(key, vars = {}) {
   const text = cache[current]?.[key] ?? cache.en?.[key] ?? key;
   return text.replace(/\{(\w+)\}/g, (match, name) => (name in vars ? String(vars[name]) : match));

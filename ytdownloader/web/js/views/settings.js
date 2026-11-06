@@ -54,7 +54,8 @@ export function mountSettings(outlet) {
   const behaviorCard = card(t("section_behavior"),
     switchRow(t("s_ask_overwrite"), "ask_overwrite"), switchRow(t("s_auto_download"), "auto_download"),
     switchRow(t("s_open_folder"), "open_folder"), switchRow(t("s_clear_url"), "clear_url"),
-    switchRow(t("s_check_updates"), "check_updates"));
+    switchRow(t("s_check_updates"), "check_updates"),
+    switchRow(t("s_queue_auto_resume"), "queue_auto_resume", t("s_queue_auto_resume_hint")));
 
   // Sign-in
   const consent = s.signin_consent;

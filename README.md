@@ -10,7 +10,11 @@ A desktop app for downloading videos, audio and playlists from YouTube. Built wi
 
 - Download video (MP4) or audio only (MP3) in the quality you choose (best, 1080p, 720p, 480p, 360p)
 - Playlist support with per-item progress, a downloaded / skipped / failed summary, and cancel
-- Optional subtitle download (saved next to the video as `.srt`)
+- Download queue: paste many links, choose one quality for all or per video, and download them one by one
+- Pause and resume: unfinished downloads are kept (for 7 days) and continue from where they stopped, even after
+  closing the app
+- Subtitle picker: every language the video has; the video and its `.srt` files go in a folder named after it
+- Storage overview: total size of your downloads in History, estimated size and free space in the queue
 - Live progress with speed and ETA, cancel at any time
 - Download history with "Show in folder" and "Remove"
 - Settings panel: download folder, default format and quality, browser cookies for sign-in, overwrite prompt, and more
@@ -83,7 +87,8 @@ Developer documentation: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) and [docs/
 | macOS | `~/Library/Application Support/YouTubeDownloader` |
 | Linux | `~/.config/youtube-downloader` |
 
-The folder holds `config.json`, `history.json` and a `temp/` folder used while downloading.
+The folder holds `config.json`, `history.json`, `queue.json` (the download queue) and a `temp/` folder used
+while downloading (it keeps the unfinished downloads under `partial_*` for up to 7 days).
 Set the `YTDL_DATA_DIR` environment variable to use a different location.
 A `config.json` or `history.json` from an older version next to the script is imported on first start.
 

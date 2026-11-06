@@ -2,7 +2,23 @@
 
 ## Unreleased
 
+### Changed
+- The Playlist page now adds the selected videos to the queue (one by one, pause/resume, survives a
+  restart) instead of running its own non-resumable job.
+
 ### Added
+- Settings switch "Continue the queue when the app starts"; the Queue tab warns when unfinished data is
+  about to be deleted (kept 7 days).
+- History shows each file's size and a total ("12 downloads on disk · 4.8 GB").
+- Download queue (engine and API): add up to 50 single videos, one quality for all or per video, a batch
+  subtitle language preference, one download at a time, pause/resume/retry/cancel, saved in `queue.json`,
+  recovery after a restart and the `queue_auto_resume` setting.
+- Queue tab: paste links, one quality for all or per video, subtitle languages for the batch, live
+  progress, pause/resume, retry, error codes with steps, estimated total size and free space.
+- Resumable downloads (engine): unfinished data is kept in `temp/partial_<key>/` when a download is
+  cancelled or fails, and the next run continues from it. Damaged partial data is dropped and fetched
+  again. Finished files are moved into place atomically, so a half-written video never appears.
+  Unfinished downloads older than 7 days are deleted at start. See `docs/PLAN_QUEUE_RESUME.md`.
 - Subtitle picker: lists every language (channel-uploaded, automatic original, automatic translations),
   pick one or more; the video and its subtitles are saved in a folder named after the video.
 - Error codes (`E100`...`E930`) with a plain title, an explanation and numbered steps in English and

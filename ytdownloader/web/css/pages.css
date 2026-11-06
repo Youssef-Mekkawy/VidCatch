@@ -90,3 +90,19 @@
 .kv dd { margin: 0; overflow-wrap: anywhere; direction: ltr; text-align: start; }
 .page__back { align-self: flex-start; }
 .run > .btn--small { align-self: flex-start; }
+
+/* ── Queue page ─────────────────────────────────────────────────────────── */
+.stack { display: flex; flex-direction: column; gap: 20px; }
+.textarea { min-height: 112px; padding-block: 12px; resize: vertical; font-family: var(--font-mono); font-size: 14px; line-height: 1.5; }
+.queue__bar { align-items: center; }
+.queue__stats { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 16px; align-items: baseline; }
+.queue__partial { align-items: center; justify-content: space-between; }
+.item--queue { align-items: flex-start; }
+.item__meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; margin-top: 6px; }
+.item__progress { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+.item__problem { flex: 1 1 100%; }
+.item__problem > .hint { padding-inline: 4px; }
+.select--small { min-height: 36px; font-size: 14px; padding-inline: 10px; width: auto; }
+.item__status[data-state="downloading"] { background: var(--lime); }
+.item__status[data-state="failed"] { background: var(--danger-bg); color: var(--danger-ink); border-color: var(--danger); }
+.item__status[data-state="paused"], .item__status[data-state="exists"] { background: var(--track); }

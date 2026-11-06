@@ -46,6 +46,7 @@ const ICONS = {
   folder: { d: ["M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"], stroke: 2 },
   back: { d: ["M15 5l-7 7 7 7"], stroke: 2.4, flip: true },
   clock: { d: ["M12 7v5l3 2", "M12 3a9 9 0 100 18 9 9 0 000-18z"], stroke: 2 },
+  pause: { d: ["M8 5v14", "M16 5v14"], stroke: 2.8 },
   trash: { d: ["M4 7h16", "M9 7V4h6v3", "M6 7l1 13h10l1-13"], stroke: 2 },
 };
 
