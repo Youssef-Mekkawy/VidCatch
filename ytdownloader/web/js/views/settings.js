@@ -2,6 +2,7 @@
 
 import { api } from "../lib/api.js";
 import { h, icon } from "../lib/dom.js";
+import { formatBytes } from "../lib/format.js";
 import { t, setLanguage } from "../lib/i18n.js";
 import { app, emit, saveSettings, toast } from "../state.js";
 
@@ -41,8 +42,37 @@ export function mountSettings(outlet) {
     } catch (e) { toast(e.message); }
   } }, icon("folder", 18), t("s_browse"));
 
+  // Temporary folder: where unfinished downloads live. Useful when the system drive is full.
+  const tempInput = h("input", { class: "input input--ltr input--path", type: "text", value: s.temp_dir || "", placeholder: t("s_temp_default_ph"), "aria-label": t("s_temp_folder") });
+  const tempInfo = h("div", { class: "hint", "aria-live": "polite" });
+  const showTempInfo = () => api.storage().then((r) => {
+    tempInfo.textContent = t("s_temp_info", { path: r.temp_dir, free: formatBytes(r.temp_free), used: formatBytes(r.partial_bytes) || "0 B" });
+  }).catch(() => {});
+  async function saveTemp(value) {
+    try {
+      await saveSettings({ temp_dir: value });
+      tempInput.value = value;
+      toast(t("s_temp_saved"));
+    } catch (e) {
+      toast(e.status === 409 ? t("s_temp_busy") : e.message);
+      tempInput.value = app.settings.temp_dir || "";
+    }
+    showTempInfo();
+  }
+  tempInput.addEventListener("change", () => saveTemp(tempInput.value.trim()));
+  const tempBrowse = h("button", { class: "btn", type: "button", onclick: async () => {
+    try {
+      const r = await api.pickFolder();
+      if (r.status === "ok") await saveTemp(r.path);
+    } catch (e) { toast(e.message); }
+  } }, icon("folder", 18), t("s_browse"));
+  const tempReset = h("button", { class: "btn btn--small", type: "button", onclick: () => saveTemp("") }, t("s_temp_use_default"));
+  showTempInfo();
+
   const downloadCard = card(t("section_download"),
     h("div", { class: "field" }, h("label", { class: "label" }, t("s_folder")), h("div", { class: "row" }, folder, browse)),
+    h("div", { class: "field" }, h("label", { class: "label" }, t("s_temp_folder")), h("div", { class: "row" }, tempInput, tempBrowse),
+      h("div", { class: "hint" }, t("s_temp_hint")), tempInfo, tempReset),
     h("button", { class: "btn btn--small", type: "button", onclick: () => api.openFolder().catch((e) => toast(e.message)) }, t("s_open_dl_folder")),
     h("div", { class: "field" }, h("span", { class: "label" }, t("s_default_format")),
       seg([["mp4", t("mp4_label")], ["mp3", t("mp3_label")]], s.default_format, async (v) => { await saveSettings({ default_format: v }); mountSettings(outlet); })),

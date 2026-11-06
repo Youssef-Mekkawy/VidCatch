@@ -316,5 +316,18 @@
   "playlist_left_out": "{n} did not fit (the queue holds 50), add them after these finish",
   "queue_partial_expiring": "Unfinished downloads use {size} and will be deleted in {days} day(s). Continue them before then.",
   "s_queue_auto_resume": "Continue the queue when the app starts",
-  "s_queue_auto_resume_hint": "Unfinished videos in the Queue tab resume by themselves. Off by default."
+  "s_queue_auto_resume_hint": "Unfinished videos in the Queue tab resume by themselves. Off by default.",
+  "dl_pause": "Pause",
+  "dl_paused_title": "Download paused",
+  "dl_paused_text": "What was already downloaded is saved. Continue now, or later from the Queue tab, even after closing the app.",
+  "dl_continue": "Continue",
+  "dl_open_queue": "Open Queue",
+  "dl_paused_status": "Paused",
+  "s_temp_folder": "Temporary folder",
+  "s_temp_hint": "Unfinished downloads are kept here. Choose a drive with enough free space if your system drive is full.",
+  "s_temp_default_ph": "Default (app data folder)",
+  "s_temp_use_default": "Use default",
+  "s_temp_info": "{path} · {free} free · unfinished downloads: {used}",
+  "s_temp_saved": "Temporary folder saved.",
+  "s_temp_busy": "Finish or pause the running downloads first, then change the folder."
 }

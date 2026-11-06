@@ -58,8 +58,11 @@ export const api = {
   startDownload: (body) => request("POST", "/downloads", body),
   startPlaylist: (body) => request("POST", "/playlists/download", body),
   cancelJob: (id) => request("POST", `/jobs/${id}/cancel`),
+  pauseJob: (id) => request("POST", `/jobs/${id}/pause`),
+  queueResumeItem: (id) => request("POST", `/queue/items/${id}/resume`),
 
   queue: () => request("GET", "/queue"),
+  storage: () => request("GET", "/storage"),
   queueAdd: (urls, options = {}) => request("POST", "/queue/items", { urls, ...options }),
   queuePatchItem: (id, body) => request("PATCH", `/queue/items/${id}`, body),
   queueRemove: (id, discard = false) => request("DELETE", `/queue/items/${id}${discard ? "?discard=true" : ""}`),

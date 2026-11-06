@@ -59,6 +59,14 @@ def resolve_exists(item_id: str, request: Request, replace: bool = False) -> dic
     return {"status": "ok"}
 
 
+@router.post("/items/{item_id}/resume")
+def resume_item(item_id: str, request: Request) -> dict:
+    """Continue one paused video."""
+    if not _queue(request).resume_item(item_id):
+        raise HTTPException(404, "That item is not paused.")
+    return {"status": "ok"}
+
+
 @router.put("/settings")
 def put_settings(body: QueueSettingsIn, request: Request) -> dict:
     _queue(request).update_settings(body.model_dump(exclude_none=True))

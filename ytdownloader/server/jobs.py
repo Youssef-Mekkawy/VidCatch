@@ -69,6 +69,7 @@ class Job:
     error: dict | None = None  # {"code", "message", "reason"?}
     summary: dict | None = None  # playlist: {"done", "skipped", "failed", "signin"}
     filepath: str = ""
+    queue_item: str = ""  # id of the queue item that tracks this download (it can be paused)
     cancelling: bool = False
     started: float = field(default_factory=time.time)
     cancel_event: threading.Event = field(default_factory=threading.Event, repr=False)
@@ -101,6 +102,7 @@ class Job:
                 "error": self.error,
                 "summary": self.summary,
                 "filepath": self.filepath,
+                "queue_item": self.queue_item,
                 "filename": Path(self.filepath).name if self.filepath else "",
                 "cancelling": self.cancelling,
             }

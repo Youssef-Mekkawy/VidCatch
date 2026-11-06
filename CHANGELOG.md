@@ -7,6 +7,11 @@
   restart) instead of running its own non-resumable job.
 
 ### Added
+- Settings: **Temporary folder** (where unfinished downloads are kept) can be moved to another drive when the
+  system drive is full. Existing unfinished downloads move with it; refused while a download is running.
+  `GET /api/storage` returns free space and unfinished-download size.
+- Pause on the Download page: a single download can be paused, survives closing the app, and is continued
+  from the Queue tab (`POST /api/jobs/{id}/pause`, `POST /api/queue/items/{id}/resume`).
 - Settings switch "Continue the queue when the app starts"; the Queue tab warns when unfinished data is
   about to be deleted (kept 7 days).
 - History shows each file's size and a total ("12 downloads on disk · 4.8 GB").

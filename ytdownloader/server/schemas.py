@@ -65,6 +65,10 @@ class DownloadIn(BaseModel):
     subtitles_only: bool = False  # save just the subtitles (the video may already be on disk)
     source: SourceIn | None = None
     overwrite: bool = False  # the user confirmed replacing an existing file
+    # Shown if the download is paused and continued from the Queue tab.
+    channel: str = Field(default="", max_length=200)
+    thumbnail: str = Field(default="", max_length=2048, pattern=r"^(https://\S*)?$")
+    duration_text: str = Field(default="", max_length=20)
 
     _url = field_validator("url")(_check_url)
 

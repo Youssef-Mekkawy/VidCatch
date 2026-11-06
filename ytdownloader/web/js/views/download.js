@@ -110,6 +110,10 @@ async function startDownloadNow(overwrite, subsOnly) {
     url: d.fetchedUrl, title: d.video.title, fmt: d.fmt, overwrite,
     quality: mp4 && d.video.qualities.length ? d.quality : null,
   };
+  // Shown in the Queue tab if this download is paused and continued there.
+  body.channel = d.video.channel || "";
+  body.duration_text = d.video.duration_text || "";
+  if ((d.video.thumbnail || "").startsWith("https://")) body.thumbnail = d.video.thumbnail;
   if (mp4 && (d.subManual.length || d.subAuto.length)) {
     body.sub_manual = d.subManual;
     body.sub_auto = d.subAuto;
@@ -143,6 +147,10 @@ async function startDownloadNow(overwrite, subsOnly) {
   changed();
   // A job that fails at once can finish before this response arrives; handle that result too.
   onJob(result.job);
+}
+
+export async function pauseDownload() {
+  if (d.jobId) await api.pauseJob(d.jobId).catch((e) => toast(e.message));
 }
 
 export async function cancelDownload() {
@@ -182,6 +190,13 @@ async function onJob(job) {
   changed();
 }
 on("job", onJob);
+// The server marks a paused download after it has ended ("cancelled" + message "paused").
+on("job", (job) => {
+  if (job.id === d.jobId && job.state === "cancelled" && job.message === "paused" && d.status !== t("dl_paused_status")) {
+    d.status = t("dl_paused_status");
+    changed();
+  }
+});
 
 // ── View ────────────────────────────────────────────────────────────────────
 function sizeText() {
@@ -369,14 +384,16 @@ export function mountDownload(outlet) {
     refs.bar = h("div", { class: "progress__bar" });
     refs.stats = h("span", { class: "run__stats" });
     refs.cancel = h("button", { class: "btn", type: "button", onclick: cancelDownload }, t("cancel_btn"));
+    refs.pause = h("button", { class: "btn btn--ink", type: "button", onclick: pauseDownload }, icon("pause", 20), t("dl_pause"));
     refs.progress = h(
       "div", { class: "run" },
       h("div", { class: "run__line" }, refs.status, refs.percent),
       h("div", { class: "progress", role: "progressbar", "aria-valuemin": 0, "aria-valuemax": 100 }, refs.bar),
-      h("div", { class: "run__bottom" }, refs.stats, refs.cancel),
+      h("div", { class: "run__bottom" }, refs.stats, h("div", { class: "row" }, refs.pause, refs.cancel)),
     );
     refs.done = h("div", { class: "notice notice--ok", role: "status" });
-    runBox.append(refs.button, refs.subsOnly, refs.progress, refs.done);
+    refs.paused = h("div", { class: "notice notice--ok", role: "status" });
+    runBox.append(refs.button, refs.subsOnly, refs.progress, refs.done, refs.paused);
   }
   buildRun();
 
@@ -401,6 +418,20 @@ export function mountDownload(outlet) {
       refs.progress.querySelector(".progress").setAttribute("aria-valuenow", String(pct));
       refs.stats.textContent = [job.speed && `${t("speed")}: ${job.speed}`, job.eta && `${t("eta")}: ${job.eta}`].filter(Boolean).join("  ·  ");
       refs.cancel.disabled = job.cancelling;
+      refs.pause.hidden = !job.queue_item || d.subsOnly;
+      refs.pause.disabled = job.cancelling;
+    }
+    const paused = job?.state === "cancelled" && job.message === "paused" && !!job.queue_item;
+    refs.paused.hidden = !paused;
+    if (paused) {
+      refs.paused.replaceChildren(
+        h("div", { class: "notice__title" }, t("dl_paused_title")),
+        h("p", { class: "muted" }, t("dl_paused_text")),
+        h("div", { class: "notice__actions" },
+          h("button", { class: "btn btn--ink btn--small", type: "button", onclick: async () => {
+            try { await api.queueResumeItem(job.queue_item); location.hash = "#/queue"; } catch (error) { toast(error.message); }
+          } }, icon("download", 18), t("dl_continue")),
+          h("a", { class: "btn btn--small", href: "#/queue" }, t("dl_open_queue"))));
     }
     const done = job?.state === "done";
     refs.done.hidden = !done;

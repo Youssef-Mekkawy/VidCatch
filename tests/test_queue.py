@@ -397,3 +397,96 @@ def test_partial_add_takes_what_fits(client):
     assert client.post("/api/queue/items", json={"urls": more}).status_code == 422
     result = client.post("/api/queue/items", json={"urls": more, "partial": True}).json()
     assert len(result["added"]) == 2 and result["left_out"] == 3
+
+
+# ── Downloads started on the Download page ──────────────────────────────────
+def start_single(client, video_id="sssssssssss", **extra):
+    body = {"url": link(video_id), "title": f"Single {video_id}", "fmt": "mp4", "quality": "720p",
+            "channel": "Chan", "duration_text": "1:40", **extra}
+    result = client.post("/api/downloads", json=body).json()
+    assert result["status"] == "started", result
+    return result["job"]
+
+
+def cancellable(started):
+    def run(url, opts, temp_root, output_path, **kw):
+        started.set()
+        hook = opts["progress_hooks"][0]
+        deadline = time.monotonic() + 5
+        while time.monotonic() < deadline:
+            hook({"status": "downloading", "downloaded_bytes": 10, "total_bytes": 100, "speed": 1, "eta": 1})
+            time.sleep(0.02)
+        raise AssertionError("never cancelled")
+
+    return run
+
+
+def test_single_download_is_tracked_and_leaves_the_queue_when_done(client, monkeypatch):
+    gate = threading.Event()
+    monkeypatch.setattr(jobs, "download_media", lambda *a, **k: (gate.wait(5), fake_download(*a, **k))[1])
+    job = start_single(client)
+    assert job["queue_item"] or client.get("/api/queue").json()["items"]
+    snap = wait(client, lambda s: statuses(s) == ["downloading"])
+    assert snap["items"][0]["title"] == "Single sssssssssss" and snap["items"][0]["quality"] == "720p"
+    gate.set()
+    wait(client, lambda s: s["items"] == [])  # it is in History, not in the queue list
+
+
+def test_pause_a_single_download_then_continue_it_from_the_queue(client, monkeypatch):
+    started, calls = threading.Event(), []
+
+    def first_then_ok(url, opts, temp_root, output_path, **kw):
+        calls.append(url)
+        if len(calls) == 1:
+            return cancellable(started)(url, opts, temp_root, output_path)
+        return fake_download(url, opts, temp_root, output_path)
+
+    monkeypatch.setattr(jobs, "download_media", first_then_ok)
+    job = start_single(client)
+    assert started.wait(3)
+    assert client.post(f"/api/jobs/{job['id']}/pause").json()["status"] == "pausing"
+    snap = wait(client, lambda s: statuses(s) == ["paused"])
+    paused = snap["items"][0]
+    fresh = client.get("/api/jobs").json()["jobs"][0]
+    assert fresh["state"] == "cancelled" and fresh["message"] == "paused" and fresh["queue_item"] == paused["id"]
+
+    assert client.post(f"/api/queue/items/{paused['id']}/resume").status_code == 200
+    wait(client, lambda s: statuses(s) == ["done"])
+    assert len(calls) == 2 and len(load_history()) == 1
+    assert client.post(f"/api/queue/items/{paused['id']}/resume").status_code == 404  # no longer paused
+
+
+def test_cancel_a_single_download_removes_it_from_the_queue(client, monkeypatch):
+    started = threading.Event()
+    monkeypatch.setattr(jobs, "download_media", cancellable(started))
+    job = start_single(client)
+    assert started.wait(3)
+    client.post(f"/api/jobs/{job['id']}/cancel")
+    wait(client, lambda s: s["items"] == [])
+
+
+def test_pause_unknown_job_and_subtitles_only_are_not_tracked(client, monkeypatch):
+    assert client.post("/api/jobs/nope/pause").status_code == 404
+
+    def fake_subs(url, opts, temp_root, video_path):
+        Path(video_path).parent.mkdir(parents=True, exist_ok=True)
+        saved = Path(video_path).with_suffix(".en.srt")
+        saved.write_text("1")
+        return [str(saved)], {}
+
+    monkeypatch.setattr(jobs, "download_subtitles_only", fake_subs)
+    job = start_single(client, sub_manual=["en"], subtitles_only=True)
+    assert job["queue_item"] == ""
+    assert client.get("/api/queue").json()["items"] == []
+
+
+def test_a_paused_single_survives_a_restart(client, monkeypatch):
+    started = threading.Event()
+    monkeypatch.setattr(jobs, "download_media", cancellable(started))
+    job = start_single(client)
+    assert started.wait(3)
+    client.post(f"/api/jobs/{job['id']}/pause")
+    wait(client, lambda s: statuses(s) == ["paused"])
+    fresh = create_app(TOKEN, PORT)
+    items = fresh.state.ctx.queue.snapshot()["items"]
+    assert [i["status"] for i in items] == ["paused"] and items[0]["title"] == "Single sssssssssss"

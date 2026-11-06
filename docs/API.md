@@ -164,6 +164,16 @@ Events: `queue_changed` (reload `GET /api/queue`) and `queue_progress` (`id`, `p
 The server does not exit while the queue is running. With the `queue_auto_resume` setting on, unfinished
 items continue by themselves when the app starts.
 
+### Single-download pause and storage
+
+- `POST /api/jobs/{job_id}/pause`: stops a running download and keeps its unfinished data. The download
+  becomes a `paused` queue item (`Job.queue_item` holds its id); 404 for an unknown job. Downloads that end
+  normally are removed from the queue again. Subtitles-only downloads cannot be paused.
+- `POST /api/queue/items/{id}/resume`: continue one paused item.
+- `PUT /api/settings` accepts `temp_dir` (absolute path, `""` = default). 409 while a download or the queue is
+  running, 422 if the folder cannot be written. Unfinished `partial_*` folders are moved to the new location.
+- `GET /api/storage`: `{download_dir, download_free, temp_dir, temp_free, partial_bytes}`.
+
 ## History and folders
 
 | Route | Description |

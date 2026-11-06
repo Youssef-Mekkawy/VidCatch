@@ -11,6 +11,7 @@ from __future__ import annotations
 import asyncio
 import glob
 import json
+import shutil
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -23,12 +24,22 @@ from .. import __version__
 from ..config import (
     clear_history,
     data_dir,
+    default_temp_dir,
     load_config,
     load_history,
     remove_history_entry,
+    temp_dir,
     update_config,
+    validate_settings_patch,
 )
-from ..downloader import clean_error, fetch_video_info, login_reason, needs_login
+from ..downloader import (
+    PARTIAL_PREFIX,
+    clean_error,
+    fetch_video_info,
+    login_reason,
+    needs_login,
+    partial_usage,
+)
 from ..errors import classify
 from ..signin import (
     Source,
@@ -52,6 +63,7 @@ from ..utils import find_existing_video, plan_output
 from .events import EventHub
 from .jobs import Busy, JobManager, PlaylistParams, VideoParams
 from .platform_ui import pick_folder
+from .queue_manager import free_space
 from .schemas import (
     DownloadIn,
     FetchIn,
@@ -124,12 +136,53 @@ def get_settings() -> dict:
     return load_config()
 
 
-@router.put("/settings")
-def put_settings(patch: dict) -> dict:
+def _change_temp_dir(request: Request, new_value: str) -> None:
+    """Check the new temporary folder and move unfinished downloads into it."""
+    ctx = _ctx(request)
+    if ctx.jobs.any_running() or ctx.queue.active():
+        raise HTTPException(409, "Finish or pause the running downloads first.")
+    old = temp_dir()
+    target = Path(new_value).expanduser() if new_value else default_temp_dir()
     try:
+        target.mkdir(parents=True, exist_ok=True)
+        probe = target / ".write_test"
+        probe.write_text("ok")
+        probe.unlink()
+    except OSError as exc:
+        raise HTTPException(422, f"Cannot write to that folder: {exc.strerror or exc}") from exc
+    if target.resolve() == old.resolve():
+        return
+    for child in old.iterdir() if old.is_dir() else []:
+        if child.is_dir() and child.name.startswith(PARTIAL_PREFIX):
+            try:
+                shutil.move(str(child), str(target / child.name))
+            except OSError:
+                pass  # that download will simply start again
+
+
+@router.put("/settings")
+def put_settings(patch: dict, request: Request) -> dict:
+    try:
+        clean = validate_settings_patch(patch)
+        if "temp_dir" in clean and clean["temp_dir"] != load_config().get("temp_dir", ""):
+            _change_temp_dir(request, clean["temp_dir"])
         return update_config(patch)
     except ValueError as exc:
         raise HTTPException(422, str(exc)) from exc
+
+
+@router.get("/storage")
+def storage() -> dict:
+    """Disk numbers for the Settings page and the Queue tab."""
+    cfg = load_config()
+    temp = temp_dir()
+    return {
+        "download_dir": cfg["download_dir"],
+        "download_free": free_space(cfg["download_dir"]),
+        "temp_dir": str(temp),
+        "temp_free": free_space(str(temp)),
+        "partial_bytes": partial_usage(temp),
+    }
 
 
 # ── Fetching metadata ───────────────────────────────────────────────────────
@@ -258,10 +311,14 @@ def start_download(body: DownloadIn, request: Request) -> dict:
         sub_manual=tuple(sub_manual), sub_auto=tuple(sub_auto), subtitles_only=body.subtitles_only,
         final=str(final), cookies=cookies,
     )
+    ctx = _ctx(request)
     try:
-        job = _ctx(request).jobs.start_video(title, params)
+        job = ctx.jobs.start_video(title, params)
     except Busy as exc:
         raise HTTPException(409, "Another task is still running.") from exc
+    if not body.subtitles_only:  # subtitles-only is quick and not resumable
+        ctx.queue.track_video(job, params, title, {
+            "channel": body.channel, "thumbnail": body.thumbnail, "duration_text": body.duration_text})
     return {"status": "started", "job": job.public()}
 
 
@@ -286,6 +343,14 @@ def start_playlist(body: PlaylistDownloadIn, request: Request) -> dict:
 @router.get("/jobs")
 def list_jobs(request: Request) -> dict:
     return {"jobs": _ctx(request).jobs.snapshot()}
+
+
+@router.post("/jobs/{job_id}/pause")
+def pause_job(job_id: str, request: Request) -> dict:
+    """Pause a download started on the Download page. It continues from the Queue tab."""
+    if not _ctx(request).queue.pause_job(job_id):
+        raise HTTPException(404, "No pausable download with that id.")
+    return {"status": "pausing"}
 
 
 @router.post("/jobs/{job_id}/cancel")

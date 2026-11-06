@@ -98,6 +98,7 @@ class QueueManager:
         self._pause = False
         self._halted = ""  # why the runner stopped by itself (e.g. "disk_full")
         self._current: tuple[str, str] | None = None  # (item id, job id)
+        self._tracked: dict[str, str] = {}  # item id -> job id, for downloads started on the Download page
         self._stop_reason: dict[str, tuple[str, bool]] = {}  # item id -> (pause|cancel|remove, discard)
         self._auto_cookies: tuple[str, str] | None = None
         self._auto_looked_up = False
@@ -162,6 +163,9 @@ class QueueManager:
     def _planned_subs(self, item: dict) -> tuple[list[str], list[str]]:
         if item.get("fmt") != "mp4":
             return [], []
+        fixed = item.get("subs_fixed")
+        if fixed is not None:  # a download started on the Download page keeps the languages picked there
+            return list(fixed.get("manual", [])), list(fixed.get("auto", []))
         tracks = item.get("tracks") or {}
         manual = match_languages(self.settings["sub_langs"], tracks.get("manual", []))
         have = {m.lower().split("-")[0] for m in manual}
@@ -513,6 +517,57 @@ class QueueManager:
         discard_partial(temp_dir())
         self.hub.publish({"type": "queue_changed"})
 
+    # ── Downloads started on the Download page ──────────────────────────────
+    def track_video(self, job, params: VideoParams, title: str, meta: dict) -> str:
+        """Record a single download in the queue so it can be paused and survives a restart.
+        Returns the queue item id, or "" when the queue is full (the download then runs untracked)."""
+        with self._lock:
+            if len(self._items) >= MAX_ITEMS:
+                return ""
+            item = {
+                "id": uuid.uuid4().hex[:10], "url": params.url, "title": title, "status": "downloading",
+                "fmt": params.fmt, "quality": params.quality, "single": True, "added": time.time(),
+                "channel": meta.get("channel", ""), "thumbnail": meta.get("thumbnail", ""),
+                "duration_text": meta.get("duration_text", ""),
+                "subs_fixed": {"manual": list(params.sub_manual), "auto": list(params.sub_auto)},
+                "source": {"browser": params.cookies[0], "profile": params.cookies[1]} if params.cookies else None,
+            }
+            item["pkey"] = self._pkey(item)
+            self._items.append(item)
+            self._tracked[item["id"]] = job.id
+        job.set(queue_item=item["id"])
+        self._changed()
+        threading.Thread(target=self._watch_single, args=(item, job), daemon=True, name="queue-single").start()
+        return item["id"]
+
+    def _watch_single(self, item: dict, job) -> None:
+        result = self._wait(item, job)
+        with self._lock:
+            self._tracked.pop(item["id"], None)
+        self._finish_item(item, job, result, runner=False)
+
+    def pause_job(self, job_id: str) -> bool:
+        """Pause a download started on the Download page: stop it and keep its unfinished data."""
+        with self._lock:
+            item_id = next((i for i, j in self._tracked.items() if j == job_id), None)
+            if item_id is None:
+                return False
+            self._stop_reason[item_id] = ("pause", False)
+        return self.jobs.cancel(job_id)
+
+    def resume_item(self, item_id: str) -> bool:
+        """Continue one paused item (the queue runner downloads it)."""
+        with self._lock:
+            item = self._find(item_id)
+            if item is None or item["status"] != "paused":
+                return False
+            item["status"] = "queued"
+            self._pause = False
+            self._halted = ""
+        self._changed()
+        self._ensure_runner()
+        return True
+
     # ── The runner thread ───────────────────────────────────────────────────
     def _next_item(self) -> dict | None:
         with self._lock:
@@ -607,22 +662,31 @@ class QueueManager:
                               "speed": pub["speed"], "eta": pub["eta"], "phase": pub["phase"]})
         return job.state
 
-    def _finish_item(self, item: dict, job, result: str) -> None:
+    def _finish_item(self, item: dict, job, result: str, runner: bool = True) -> None:
+        paused_single = False
         with self._lock:
-            self._current = None
+            if runner:
+                self._current = None
             reason, discard = self._stop_reason.pop(item["id"], ("", False))
             item.update(percent=0.0, speed="", eta="", phase="")
+            single = bool(item.get("single")) and not runner  # watched from the Download page
             if reason == "remove":
                 if item in self._items:
                     self._items.remove(item)
                 if discard and item.get("pkey"):
                     discard_partial(temp_dir(), item["pkey"])
+            elif single and not (result == "cancelled" and reason == "pause"):
+                # A download started on the Download page leaves the queue when it ends (History has
+                # it, and the page shows its result). Only a paused one stays, to be continued.
+                if item in self._items:
+                    self._items.remove(item)
             elif result == "done":
                 item.update(status="done", filepath=job.filepath, error=None,
                             message="subtitles_skipped" if job.message == "subtitles_skipped" else "")
             elif result == "cancelled":
                 if reason == "pause":
                     item["status"] = "paused"
+                    paused_single = single
                 else:
                     item["status"] = "cancelled"
                     if discard and item.get("pkey"):
@@ -632,6 +696,10 @@ class QueueManager:
                 message = (job.error or {}).get("message", "").lower()
                 if "no space left" in message or "disk full" in message:
                     self._halted = "disk_full"  # every other item would fail the same way
+            if single and result == "cancelled" and reason == "pause":
+                paused_single = True
+        if paused_single:
+            job.set(message="paused")  # the Download page shows "Paused" instead of "Cancelled"
         self._changed()
 
 

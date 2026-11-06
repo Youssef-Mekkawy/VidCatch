@@ -86,6 +86,42 @@ def test_settings_roundtrip_and_validation(client):
     assert client.put("/api/settings", json={}).status_code == 422
 
 
+def test_temp_folder_setting(client, tmp_path):
+    from ytdownloader.config import temp_dir
+    from ytdownloader.downloader import partial_path
+
+    old = temp_dir()
+    partial = partial_path(old, "abc")
+    partial.mkdir(parents=True)
+    (partial / "x.part").write_text("data")
+
+    target = tmp_path / "bigdrive" / "tmp"
+    assert client.put("/api/settings", json={"temp_dir": "relative/path"}).status_code == 422
+    assert client.put("/api/settings", json={"temp_dir": str(target)}).json()["temp_dir"] == str(target)
+    assert temp_dir() == target
+    assert (target / partial.name / "x.part").read_text() == "data"  # unfinished download moved along
+    assert not partial.exists()
+
+    info = client.get("/api/storage").json()
+    assert info["temp_dir"] == str(target) and info["partial_bytes"] == 4
+
+    assert client.put("/api/settings", json={"temp_dir": ""}).json()["temp_dir"] == ""
+    assert temp_dir() == old and (old / partial.name / "x.part").exists()
+
+
+def test_temp_folder_refused_while_downloading(client, app, tmp_path, monkeypatch):
+    monkeypatch.setattr(app.state.ctx.jobs, "any_running", lambda: True)
+    r = client.put("/api/settings", json={"temp_dir": str(tmp_path / "t")})
+    assert r.status_code == 409
+    assert not (tmp_path / "t").exists()
+
+
+def test_temp_folder_must_be_writable(client, tmp_path):
+    blocker = tmp_path / "file"
+    blocker.write_text("x")
+    assert client.put("/api/settings", json={"temp_dir": str(blocker / "sub")}).status_code == 422
+
+
 def test_changing_browser_resets_profile(client):
     client.put("/api/settings", json={"cookies_browser": "firefox", "cookies_profile": "abc.default"})
     result = client.put("/api/settings", json={"cookies_browser": "chrome"}).json()

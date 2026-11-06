@@ -87,7 +87,7 @@ Developer documentation: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) and [docs/
 | macOS | `~/Library/Application Support/YouTubeDownloader` |
 | Linux | `~/.config/youtube-downloader` |
 
-The folder holds `config.json`, `history.json`, `queue.json` (the download queue) and a `temp/` folder used
+The folder holds `config.json`, `history.json`, `queue.json` (the download queue) and a `temp/` folder (movable in Settings) used
 while downloading (it keeps the unfinished downloads under `partial_*` for up to 7 days).
 Set the `YTDL_DATA_DIR` environment variable to use a different location.
 A `config.json` or `history.json` from an older version next to the script is imported on first start.

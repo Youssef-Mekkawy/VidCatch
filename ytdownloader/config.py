@@ -30,6 +30,7 @@ DEFAULT_CONFIG: dict = {
     "cookies_profile": "",  # browser profile folder name, "" = the browser's main profile
     "signin_consent": "ask",  # "ask" (not decided yet) | "allow" | "never"
     "check_updates": True,
+    "temp_dir": "",  # where downloads are kept while in progress; "" = the app data folder
     "queue_auto_resume": False,  # continue unfinished queue items when the app starts
 }
 
@@ -68,8 +69,22 @@ def history_path() -> Path:
     return data_dir() / "history.json"
 
 
+def default_temp_dir() -> Path:
+    return data_dir() / "temp"
+
+
 def temp_dir() -> Path:
-    path = data_dir() / "temp"
+    """Folder for downloads in progress. The user can move it (Settings) when the system drive is full;
+    if the chosen folder cannot be used, the default one is used instead."""
+    custom = load_config().get("temp_dir", "").strip()
+    if custom:
+        path = Path(custom).expanduser()
+        try:
+            path.mkdir(parents=True, exist_ok=True)
+            return path
+        except OSError:
+            pass
+    path = default_temp_dir()
     path.mkdir(parents=True, exist_ok=True)
     return path
 
@@ -181,6 +196,11 @@ def validate_settings_patch(patch: object) -> dict:
             raise ValueError(f"Invalid value for {key}.")
     if "download_dir" in clean and not clean["download_dir"].strip():
         raise ValueError("The download folder cannot be empty.")
+    if "temp_dir" in clean:
+        value = clean["temp_dir"].strip()
+        if len(value) > 500 or "\0" in value or (value and not Path(value).expanduser().is_absolute()):
+            raise ValueError("The temporary folder must be a full path.")
+        clean["temp_dir"] = value
     if "cookies_profile" in clean and (
         len(clean["cookies_profile"]) > 100 or any(c in clean["cookies_profile"] for c in "/\\")
     ):
