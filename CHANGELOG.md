@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.0.1 - 2026-11-06
+
+### Removed
+- The old CustomTkinter desktop window (`app.py`, `ui/`, `theme.py`, `i18n.py`) and its dependencies
+  (`customtkinter`, `Pillow`). `python -m vidcatch` and the `vidcatch` command now start the web app.
+  The import of `config.json`/`history.json` files kept next to the script by very old versions is gone too.
+
+### Changed
+- README screenshots show the web app (Queue, History, Settings, Playlist and the Arabic interface).
+
+### Fixed
+- The Arabic interface still used the old Arabic name as its title; it now says VidCatch.
+- Stopping the server no longer writes a long "Task cancelled" traceback to `server.log`.
+
 ## 1.0.0 - 2026-11-06
 
 First release under the name **VidCatch** (the project was called YouTube Downloader before).
@@ -7,11 +21,6 @@ First release under the name **VidCatch** (the project was called YouTube Downlo
 ### Added
 - Ready-to-run builds for Windows, Linux and macOS (PyInstaller, `packaging/`). A GitHub Actions workflow builds
   them when a version tag is pushed, smoke-tests each one, and attaches them with SHA-256 checksums to the release.
-
-### Removed
-- The old CustomTkinter desktop window (`app.py`, `ui/`, `theme.py`, `i18n.py`) and its dependencies
-  (`customtkinter`, `Pillow`). `python -m vidcatch` and the `vidcatch` command now start the web app.
-  The import of `config.json`/`history.json` files kept next to the script by very old versions is gone too.
 
 ### Renamed
 - The app, the Python package (`vidcatch`), the commands (`vidcatch`, `vidcatch-desktop`) and the data folder
